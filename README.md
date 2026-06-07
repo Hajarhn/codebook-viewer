@@ -26,18 +26,17 @@ A read-only viewer for the PCNN codebook. Researchers can browse, search, and vi
 - Atomic instrument matching: a variable with Instrument = `"DSQ-PEM + DSQ-2"` is shown under both DSQ-PEM and DSQ-2
 - Search across multiple fields with four match modes (contains / exact / starts-with / regex), with hit-highlighting in results
 - View the full details of any variable
+- Export to Excel: download the entire codebook or a single instrument as an Excel file
 - Copyright filter: questionnaires marked as restricted (e.g. EQ-5D-5L, PROMIS-29) are replaced with a placeholder row showing who to contact for access
 
-## Quick start
+Quick start
+The viewer is hosted online and protected with a shared password — there is nothing to download or install.
 
-The viewer is distributed as a single password-protected HTML file.
+Open the viewer link in any modern browser (Chrome, Edge, Firefox, Safari): https://hajarhn.github.io/codebook-viewer/
+Enter the password (shared separately by the codebook coordinator) and click Unlock.
+The codebook loads automatically.
 
-1. Save the file (e.g. `PCNN_Codebook_Viewer_protected.html`) to your computer.
-2. Double-click to open it in any modern browser (Chrome, Edge, Firefox, Safari).
-3. Enter the password (shared separately by the codebook coordinator).
-4. The codebook loads automatically.
-
-No account, installation, or internet connection is required to use it.
+No account or installation is needed.
 
 ## Visible fields
 
@@ -78,7 +77,7 @@ The viewer runs entirely in your browser. The codebook is bundled directly into 
 
 If you use this viewer in a paper or presentation, please also acknowledge:
 
-> The PCNN Codebook Viewer was developed within the Post-COVID Network Netherlands (PCNN), funded by ZonMw.
+> The PCNN Codebook Viewer was developed within the Post-COVID Network Netherlands (PCNN).
 
 ## Contact
 

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encrypt codebook.json → codebook.enc</title>
+<style>
+  :root{--bg:#fafaf7;--surface:#fff;--border:#e3e1d8;--border-strong:#c8c5b8;--text:#1f1e1a;--muted:#6a685f;--faint:#9a988e;--accent:#185FA5;--accent-bg:#E6F1FB;--accent-text:#0C447C;--ok:#1f7a3d;--ok-bg:#E9F6EE;--danger:#A32D2D;--danger-bg:#FCEBEB;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:antialiased}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:520px;width:100%;padding:32px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.06)}
+  h1{font-size:18px;font-weight:650;margin-bottom:6px}
+  p.sub{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:22px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 7px}
+  input[type=file],input[type=password],input[type=text]{width:100%;font-size:14.5px;font-family:var(--sans);padding:11px 12px;border:1px solid var(--border-strong);border-radius:9px;background:#fff;color:var(--text);outline:none}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+  .row{position:relative}
+  .toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;color:var(--faint);font-size:12px}
+  button.go{width:100%;margin-top:24px;font-size:15px;font-weight:600;padding:12px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer}
+  button.go:hover{background:var(--accent-text)}
+  button.go:disabled{opacity:.55;cursor:default}
+  .msg{display:none;margin-top:18px;font-size:13.5px;padding:11px 13px;border-radius:9px;line-height:1.5}
+  .msg.ok{display:block;background:var(--ok-bg);border:1px solid #c9e6d4;color:var(--ok)}
+  .msg.err{display:block;background:var(--danger-bg);border:1px solid #f3d3d3;color:var(--danger)}
+  .msg a{color:var(--accent-text);font-weight:600}
+  .note{margin-top:22px;font-size:11.5px;color:var(--faint);line-height:1.55;border-top:1px solid var(--border);padding-top:16px}
+  code{background:#f1efe7;padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Encrypt the codebook</h1>
+    <p class="sub">Turns your <code>codebook.json</code> into an encrypted <code>codebook.enc</code> that is safe to put on a public host. Everything happens on this page, in your browser &mdash; your data is never uploaded anywhere.</p>
+
+    <label for="file">1 · Choose your codebook.json</label>
+    <input id="file" type="file" accept=".json,application/json">
+
+    <label for="pw">2 · Set the password</label>
+    <div class="row">
+      <input id="pw" type="password" placeholder="The shared WP1 password" autocomplete="off">
+      <button class="toggle" type="button" onclick="tg()">show</button>
+    </div>
+
+    <button class="go" id="btn" onclick="run()">Encrypt → download codebook.enc</button>
+
+    <div class="msg" id="msg"></div>
+
+    <div class="note">Use the <strong>same password</strong> here as the one set in the viewer. The output file is meaningless without it (AES-256, PBKDF2). To update later, just run this again on the new <code>codebook.json</code>.</div>
+  </div>
+
+<script>
+const ITER = 200000;
+const b64 = (buf) => {
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  const CHUNK = 0x8000; // 32 KB at a time, so large files don't overflow the stack
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(bin);
+};
+function tg(){const i=document.getElementById('pw');const b=event.target;if(i.type==='password'){i.type='text';b.textContent='hide';}else{i.type='password';b.textContent='show';}}
+function show(type,html){const m=document.getElementById('msg');m.className='msg '+type;m.innerHTML=html;}
+
+async function run(){
+  const f = document.getElementById('file').files[0];
+  const pw = document.getElementById('pw').value;
+  const btn = document.getElementById('btn');
+  if(!f){ show('err','Please choose your codebook.json file first.'); return; }
+  if(!pw){ show('err','Please set a password.'); return; }
+  btn.disabled = true; btn.textContent = 'Encrypting…';
+  try{
+    const text = await f.text();
+    try { JSON.parse(text); } catch(e){ throw new Error('That file is not valid JSON.'); }
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const baseKey = await crypto.subtle.importKey('raw', enc.encode(pw), {name:'PBKDF2'}, false, ['deriveKey']);
+    const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:ITER,hash:'SHA-256'}, baseKey, {name:'AES-GCM',length:256}, false, ['encrypt']);
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(text));
+    const out = JSON.stringify({ v:1, iter:ITER, salt:b64(salt), iv:b64(iv), ct:b64(ct) });
+    const url = URL.createObjectURL(new Blob([out], {type:'application/octet-stream'}));
+    const a = document.createElement('a'); a.href=url; a.download='codebook.enc'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    show('ok','Done. <strong>codebook.enc</strong> has been downloaded. Upload it next to the viewer (and remove the old codebook.json). Original size: '+text.length.toLocaleString()+' chars.');
+    btn.disabled=false; btn.textContent='Encrypt → download codebook.enc';
+  }catch(e){
+    show('err', e.message || 'Something went wrong.');
+    btn.disabled=false; btn.textContent='Encrypt → download codebook.enc';
+  }
+}
+</script>
+</body>
+</html>

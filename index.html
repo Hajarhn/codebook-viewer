@@ -863,10 +863,8 @@ async function init() {
     }
   });
 
-  // Show a brief loading state, then load the codebook from Supabase.
-  const _g = document.getElementById("gate");
-  if (_g) { const c = _g.querySelector(".card"); if (c) c.innerHTML = '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h1>PCNN Codebook Viewer</h1><p class="sub">Loading the codebook\u2026</p>'; }
-  loadFromSupabase();
+  // Show the password screen; the codebook loads from Supabase after unlock.
+  setupGate();
 }
 
 // Take a parsed JSON payload and wire it into state + render everything
@@ -1996,6 +1994,35 @@ function devLoadJsonFile(event) {
 const SUPABASE_URL = "https://aajgbgoqomghngwfzqmz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhamdiZ29xb21naG5nd2Z6cW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODE0NjIsImV4cCI6MjA5NTQ1NzQ2Mn0.cNDqenHtTZdPNERghQGwN9_UcPCx34MKqwkrd6OKABE";
 const RESEARCHER_VIEW = "researcher_codebook";
+const EXPECTED_PW_HASH = "8f3c22ef936e768455e64d174ef313ace09686abad68e8f407c1f23ff64d0cb9"; // SHA-256 of the shared password (soft gate; not real access control)
+
+function setupGate() {
+  const inp = document.getElementById("gate-pw");
+  const btn = document.getElementById("gate-btn");
+  if (inp) inp.addEventListener("keydown", e => { if (e.key === "Enter") gateUnlock(); });
+  if (btn) btn.addEventListener("click", gateUnlock);
+  if (inp) inp.focus();
+}
+async function _sha256hex(s) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function gateUnlock() {
+  const inp = document.getElementById("gate-pw");
+  const err = document.getElementById("gate-err");
+  const pw = inp.value;
+  if (!pw) return;
+  err.style.display = "none";
+  if ((await _sha256hex(pw)) !== EXPECTED_PW_HASH) {
+    err.textContent = "Incorrect password. Please try again.";
+    err.style.display = "block";
+    inp.select();
+    return;
+  }
+  const card = document.getElementById("gate").querySelector(".card");
+  if (card) card.innerHTML = '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h1>PCNN Codebook Viewer</h1><p class="sub">Loading the codebook\u2026</p>';
+  loadFromSupabase();
+}
 
 async function loadFromSupabase() {
   const gate = document.getElementById("gate");

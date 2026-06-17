@@ -396,7 +396,7 @@
         <div class="brand-title">Codebook</div>
         <div class="brand-sub">PCNN variable dictionary</div>
       </div>
-      <span class="version-pill">v1.1 · viewer</span>
+      <span class="version-pill">v1.3 · viewer</span>
     </div>
     <div class="topbar-actions">
       <button class="btn-secondary" onclick="openExcelDialog()" title="Download visible variables as a styled Excel file">📊 Download Excel</button>
@@ -620,7 +620,7 @@
 
       <hr class="sep">
 
-      <p><strong>Viewer version:</strong> v1.1 · researcher viewer<br>
+      <p><strong>Viewer version:</strong> v1.3 · researcher viewer<br>
       <strong>Last updated:</strong> <span id="about-last-edited">—</span></p>
 
       <hr class="sep">
@@ -817,7 +817,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v1.1";
+const TOOL_VERSION = "v1.3";
 const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
 const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
 
@@ -2034,28 +2034,46 @@ async function gateUnlock() {
 
 async function loadFromSupabase() {
   const gate = document.getElementById("gate");
+  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
+  async function getJSON(url) {
+    const r = await fetch(url, { headers });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return Array.isArray(j) ? j : null;
+  }
+  const VIEW = "variables_public";
   try {
-    const base = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
-    const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
-    let resp = await fetch(base + "&is_deleted=eq.false", { headers });
-    if (!resp.ok) resp = await fetch(base, { headers });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    let rows = await resp.json();
-    if (!Array.isArray(rows)) throw new Error("unexpected response shape");
+    // Main data (this view does not filter is_deleted by itself).
+    let rows = await getJSON(SUPABASE_URL + "/rest/v1/" + VIEW + "?select=*&limit=20000");
+    if (!rows) rows = await getJSON(SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000");
+    if (!rows) throw new Error("no data");
 
-    // The researcher view may not expose is_deleted, so it can still return
-    // soft-deleted rows. Pull the set of deleted ids straight from the
-    // variables table and exclude them by id.
+    // ---- DIAGNOSTICS (temporary) ----
     try {
-      const delResp = await fetch(SUPABASE_URL + "/rest/v1/variables?select=id&is_deleted=eq.true&limit=20000", { headers });
-      if (delResp.ok) {
-        const delRows = await delResp.json();
-        if (Array.isArray(delRows) && delRows.length) {
-          const deletedIds = new Set(delRows.map(r => r.id));
-          rows = rows.filter(r => !deletedIds.has(r.id));
-        }
-      }
-    } catch (_) { /* if this fails, fall through with whatever we have */ }
+      console.log("[viewer-diag] total rows:", rows.length);
+      console.log("[viewer-diag] sample row keys:", rows[0] ? Object.keys(rows[0]) : "none");
+      console.log("[viewer-diag] sample row:", rows[0]);
+      const flagged = rows.filter(r => {
+        const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
+        return d === true || d === "true" || d === "t" || d === 1;
+      });
+      console.log("[viewer-diag] rows with truthy is_deleted in payload:", flagged.length);
+    } catch (_) {}
+    // ---- END DIAGNOSTICS ----
+
+    // Separately fetch the ids that are soft-deleted (same view, so allowed),
+    // and exclude them. This works even if the row payload omits is_deleted.
+    let deletedIds = new Set();
+    let del = await getJSON(SUPABASE_URL + "/rest/v1/" + VIEW + "?select=id&is_deleted=eq.true&limit=20000");
+    if (!del) del = await getJSON(SUPABASE_URL + "/rest/v1/variables?select=id&is_deleted=eq.true&limit=20000");
+    if (Array.isArray(del)) del.forEach(r => deletedIds.add(r.id));
+    try { console.log("[viewer-diag] deleted ids fetched:", deletedIds.size, [...deletedIds].slice(0,5)); } catch(_){}
+
+    rows = rows.filter(r => {
+      if (deletedIds.has(r.id)) return false;
+      const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
+      return !(d === true || d === "true" || d === "t" || d === 1);
+    });
 
     if (gate) gate.style.display = "none";
     applyLoadedPayload({ variables: rows }, true);

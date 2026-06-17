@@ -863,8 +863,10 @@ async function init() {
     }
   });
 
-  // Data is loaded only after the user enters the password (see gateUnlock).
-  setupGate();
+  // Show a brief loading state, then load the codebook from Supabase.
+  const _g = document.getElementById("gate");
+  if (_g) { const c = _g.querySelector(".card"); if (c) c.innerHTML = '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h1>PCNN Codebook Viewer</h1><p class="sub">Loading the codebook\u2026</p>'; }
+  loadFromSupabase();
 }
 
 // Take a parsed JSON payload and wire it into state + render everything
@@ -1990,55 +1992,27 @@ function devLoadJsonFile(event) {
 }
 
 // ============ GO ============
-// ---- Password gate + encrypted-data loading --------------------------------
-const CODEBOOK_ENC_URL = "./codebook.enc";
-const ENC_ITER = 200000;
+// ---- Load codebook from Supabase (researcher view) ------------------------
+const SUPABASE_URL = "https://aajgbgoqomghngwfzqmz.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhamdiZ29xb21naG5nd2Z6cW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODE0NjIsImV4cCI6MjA5NTQ1NzQ2Mn0.cNDqenHtTZdPNERghQGwN9_UcPCx34MKqwkrd6OKABE";
+const RESEARCHER_VIEW = "researcher_codebook";
 
-function _b64ToBytes(b64) {
-  const bin = atob(b64); const a = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
-  return a;
-}
-async function _decryptEnc(pw, enc) {
-  const baseKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), { name: "PBKDF2" }, false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: _b64ToBytes(enc.salt), iterations: enc.iter || ENC_ITER, hash: "SHA-256" },
-    baseKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: _b64ToBytes(enc.iv) }, key, _b64ToBytes(enc.ct));
-  return new TextDecoder().decode(plain);
-}
-function setupGate() {
-  const inp = document.getElementById("gate-pw");
-  const btn = document.getElementById("gate-btn");
-  if (inp) inp.addEventListener("keydown", e => { if (e.key === "Enter") gateUnlock(); });
-  if (btn) btn.addEventListener("click", gateUnlock);
-  if (inp) inp.focus();
-}
-async function gateUnlock() {
-  const inp = document.getElementById("gate-pw");
-  const btn = document.getElementById("gate-btn");
-  const err = document.getElementById("gate-err");
-  const pw = inp.value;
-  if (!pw) return;
-  err.style.display = "none";
-  btn.disabled = true; btn.textContent = "Unlocking\u2026";
+async function loadFromSupabase() {
+  const gate = document.getElementById("gate");
   try {
-    const resp = await fetch(CODEBOOK_ENC_URL, { cache: "no-cache" });
-    if (!resp.ok) throw new Error("fetch " + resp.status);
-    const enc = await resp.json();
-    let text;
-    try { text = await _decryptEnc(pw, enc); }
-    catch (e) { throw new Error("BAD_PASSWORD"); }
-    const payload = JSON.parse(text);
-    document.getElementById("gate").style.display = "none";
-    applyLoadedPayload(payload, true);
+    const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
+    const resp = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const rows = await resp.json();
+    if (!Array.isArray(rows)) throw new Error("unexpected response shape");
+    if (gate) gate.style.display = "none";
+    applyLoadedPayload({ variables: rows }, true);
   } catch (e) {
-    btn.disabled = false; btn.textContent = "Unlock";
-    err.textContent = (e.message === "BAD_PASSWORD")
-      ? "Incorrect password. Please try again."
-      : "Could not load the codebook. Check your connection and try again.";
-    err.style.display = "block";
-    inp.select();
+    if (gate) {
+      const card = gate.querySelector(".card");
+      if (card) card.innerHTML = '<h1>Could not load the codebook</h1><p class="sub">Please check your connection and refresh the page.</p>';
+    }
+    console.error("Supabase load failed:", e);
   }
 }
 

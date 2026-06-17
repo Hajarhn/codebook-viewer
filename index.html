@@ -1,0 +1,2049 @@
+<!DOCTYPE html>
+<!--
+  ================================================================================
+  PCNN Codebook — Researcher Viewer (read-only)
+
+  © 2026 Hajar Hasannejadasl. All rights reserved.
+
+  Built within the Post-COVID Network Netherlands (PCNN), a national collaborative
+  research partnership funded by ZonMw. This is the read-only viewer companion to
+  the Codebook Editor; it shares no editing functionality.
+
+  Distribution: shared with PCNN project collaborators on a per-use basis only.
+  Sharing with third parties, reverse engineering, or using the source code or
+  design in derivative works is not permitted without prior consent.
+
+  For permission requests, please contact the author.
+
+  Tool name:   PCNN Codebook Viewer
+  Author:      Hajar Hasannejadasl
+  Affiliation: Maastricht University Medical Centre+ (MUMC+)
+  Project:     Post-COVID Network Netherlands (PCNN), funded by ZonMw
+  Created:     2026
+  Contact:     hajar.hasannejadasl@mumc.nl
+  ================================================================================
+-->
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCNN Codebook — Viewer</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f4f3ee;
+    --border: #e3e1d8;
+    --border-strong: #c8c5b8;
+    --text: #1f1e1a;
+    --text-muted: #6a685f;
+    --text-faint: #9a988e;
+    --accent: #185FA5;
+    --accent-bg: #E6F1FB;
+    --accent-text: #0C447C;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+    --warn: #854F0B;
+    --warn-bg: #FAEEDA;
+    --green: #2E7D32;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  <script data-goatcounter="https://hajarhn.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+  .app { max-width: 1200px; margin: 0 auto; padding: 0 1rem 4rem; }
+
+  /* ============ TOP TOOLBAR ============ */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.9rem 1rem; position: sticky; top: 0; z-index: 50; margin-bottom: 1.5rem; }
+  .topbar-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .logo { width: 32px; height: 32px; background: var(--accent); color: white; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .brand-logo {
+    height: 44px;
+    width: auto;
+    flex-shrink: 0;
+    display: block;
+  }
+  @media (max-width: 700px) {
+    .brand-logo { height: 36px; }
+  }
+  .brand-text { display: flex; flex-direction: column; gap: 1px; }
+  .brand-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+  .brand-sub { font-size: 11.5px; color: var(--text-muted); line-height: 1.2; }
+  .version-pill { font-size: 11px; color: var(--text-faint); font-weight: 400; padding: 2px 8px; background: var(--surface-2); border-radius: 10px; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  /* ============ BUTTONS ============ */
+  button { font-family: var(--sans); font-size: 13px; padding: 7px 13px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.12s; border: 1px solid transparent; line-height: 1.3; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-text); }
+  .btn-primary:disabled { background: var(--text-faint); cursor: not-allowed; }
+  .btn-secondary { background: var(--surface); border: 1px solid var(--border-strong); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface-2); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+  .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+  .btn-mini { font-size: 11px; padding: 4px 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-muted); border-radius: 4px; cursor: pointer; font-weight: 500; }
+  .btn-mini:hover { background: var(--surface-2); color: var(--text); }
+
+  /* ============ INFOBAR ============ */
+  .infobar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; font-size: 12.5px; }
+  .infobar-item { display: flex; align-items: center; gap: 6px; }
+  .infobar-item .label { color: var(--text-muted); font-size: 11px; }
+  .infobar-item strong { font-weight: 600; }
+
+  /* ============ INSTRUMENT BAR ============ */
+  .instrument-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .instrument-bar label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .instrument-bar select { flex: 1; min-width: 260px; max-width: 520px; padding: 8px 12px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); font-family: inherit; }
+  .instrument-bar select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+
+  /* ============ TABS ============ */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; overflow-x: auto; }
+  .tab { background: transparent; border: none; padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color 0.12s, border-color 0.12s; display: flex; align-items: center; gap: 6px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .count { background: var(--surface-2); color: var(--text-muted); padding: 1px 7px; border-radius: 10px; font-size: 11px; }
+  .tab.active .count { background: var(--accent-bg); color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ============ TOOLBAR INSIDE TABS ============ */
+  .panel-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .panel-toolbar input[type="text"] { flex: 1; min-width: 180px; padding: 7px 11px; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); }
+  .panel-toolbar input[type="text"]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+
+  /* ============ VARIABLES TABLE ============ */
+  .vars-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .vars-table-scroll { overflow-x: auto; max-width: 100%; }
+
+  /* Top horizontal scrollbar — a thin scrollable div above the table whose
+     inner div mirrors the table's scrollWidth. JS syncs scrollLeft between
+     this and the table below, so users see horizontal scroll affordance at
+     the top of the table (not buried under 30 rows). */
+  .vars-table-topscroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .vars-table-topscroll-inner {
+    height: 12px;
+    /* width set via JS to match table.scrollWidth */
+  }
+  .vars-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .vars-table th {
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 600;
+    color: var(--accent-text);
+    border-bottom: 2px solid var(--border-strong);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+  }
+  .vars-table td {
+    padding: 13px 14px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    word-break: break-word;
+    line-height: 1.55;
+  }
+  .vars-table tr:last-child td { border-bottom: none; }
+  .vars-table tbody tr { transition: background-color 0.1s; }
+  .vars-table tbody tr:hover td { background: #f8f6ef; }
+  /* Subtle zebra striping */
+  .vars-table tbody tr:nth-child(even) td { background: #fcfbf6; }
+  .vars-table tbody tr:nth-child(even):hover td { background: #f5f2e8; }
+
+  /* Column-specific widths and styles */
+  .vars-table .col-idx       { width: 20px;  color: var(--text-faint); font-family: var(--mono); font-size: 11px; white-space: nowrap; text-align: right; padding-right: 5px; }
+  .vars-table .col-theme     { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: .5; }
+  .vars-table .col-subdomain { min-width: 200px; max-width: 180px; white-space: pre-wrap; font-size: 12px;  line-height: 0.2; }
+  .vars-table .col-instrument { min-width: 200px; max-width: 180px; white-space: pre-wrap; font-size: 12px;  line-height: 1; }
+  .vars-table .col-varname   { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1; }
+  .vars-table .col-label-nl   { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1; }
+  .vars-table .col-label-en  { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1.6; }
+  .vars-table .col-value-nl  { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1.6; }
+  .vars-table .col-value-en  { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1.6; }
+  .vars-table .col-fair      { min-width: 200px; max-width: 280px; white-space: pre-wrap; font-size: 12px;  line-height: 1.6; }
+  .vars-table td.cell-empty  { color: var(--text-faint); font-size: 14px; padding-top: 13px; }
+
+  /* Restricted (copyright) placeholder row */
+  .vars-table tr.restricted-row td {
+    background: var(--warn-bg) !important;
+    color: var(--warn);
+    padding: 16px 18px;
+  }
+  .vars-table tr.restricted-row td .restricted-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .vars-table tr.restricted-row td .restricted-icon { font-size: 18px; }
+  .vars-table tr.restricted-row td .restricted-name {
+    font-weight: 600;
+    font-style: normal;
+    color: var(--warn);
+    font-size: 13.5px;
+    background: rgba(255,255,255,0.5);
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+  .vars-table tr.restricted-row td .restricted-msg {
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--warn);
+    flex: 1;
+    min-width: 200px;
+    line-height: 1.5;
+  }
+  .vars-table tr.restricted-row td .restricted-msg a {
+    color: var(--warn);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  .empty-state { padding: 3rem 1rem; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  /* ============ PAGINATION ============ */
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    font-size: 12.5px;
+  }
+  .pagination-info {
+    flex: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    min-width: 220px;
+  }
+  .pagination .btn-mini { padding: 5px 11px; }
+  .pagination .btn-mini:disabled { opacity: 0.35; cursor: not-allowed; }
+  .page-size-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    cursor: pointer;
+  }
+  .page-size-picker select {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .page-size-picker select:focus { outline: none; border-color: var(--accent); }
+
+  /* ============ FORMS ============ */
+  label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; display: block; font-weight: 500; }
+  input[type="text"], select { width: 100%; font-size: 13px; font-family: var(--sans); color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; padding: 8px 11px; transition: border-color 0.12s, box-shadow 0.12s; }
+  input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+  input[type="checkbox"], input[type="radio"] { margin-right: 6px; cursor: pointer; }
+  .hint { font-size: 12px; color: var(--text-faint); margin-top: 5px; line-height: 1.5; }
+  .info-box { background: var(--surface-2); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 4px; margin: 0.75rem 0; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+  .info-box code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-family: var(--mono); font-size: 11px; }
+  .msg { font-size: 12px; padding: 9px 12px; border-radius: 6px; margin-top: 10px; line-height: 1.5; }
+  .msg-error { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c6c6; }
+  .msg-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #f0d4a3; }
+
+  /* ============ MODAL ============ */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(31, 30, 26, 0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 12px 48px rgba(0,0,0,0.18); }
+  .modal-header { padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+  .modal-title { font-size: 16px; font-weight: 500; }
+  .modal-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .modal-body { padding: 1.1rem 1.25rem; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+  .field-readonly { padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .field-readonly:last-child { border-bottom: none; }
+  .field-readonly-name { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+  .field-readonly-value { font-size: 13px; word-break: break-word; white-space: pre-wrap; }
+  .field-readonly-value.empty { color: var(--text-faint); font-style: italic; }
+
+  /* ============ EXCEL MODAL ============ */
+  .layout-option { display: block; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: 6px; cursor: pointer; transition: all 0.1s; }
+  .layout-option:hover { background: var(--surface-2); }
+  .layout-option:has(input:checked) { background: var(--accent-bg); border-color: var(--accent); }
+  .excel-row { display: flex; align-items: center; padding: 4px 4px; font-size: 12px; gap: 8px; cursor: pointer; }
+  .excel-row:hover { background: var(--surface-2); }
+  .excel-row .count { color: var(--text-faint); font-size: 11px; }
+
+  /* ============ MISC ============ */
+  details { margin-top: 0.75rem; }
+  details summary { cursor: pointer; font-size: 12px; color: var(--text-muted); user-select: none; padding: 5px 0; }
+  details summary:hover { color: var(--text); }
+  a { color: var(--accent); }
+  hr.sep { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+  /* ============ FORM-ROW (Suggest modal) ============ */
+  .form-row { margin-bottom: 12px; }
+  .form-row label { margin-bottom: 4px; }
+  .form-row input[type="text"],
+  .form-row select,
+  .form-row textarea {
+    width: 100%;
+    padding: 8px 11px;
+    font-size: 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    font-family: inherit;
+  }
+  .form-row textarea {
+    resize: vertical;
+    min-height: 56px;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+  }
+
+  /* ============ DROPDOWN MENU ============ */
+  .menu-wrap { position: relative; }
+  .menu-list { position: absolute; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); min-width: 220px; padding: 4px; display: none; z-index: 60; }
+  .menu-list.open { display: block; }
+  .menu-list button { display: block; width: 100%; text-align: left; padding: 8px 12px; background: transparent; border: none; border-radius: 4px; font-size: 13px; color: var(--text); cursor: pointer; }
+  .menu-list button:hover { background: var(--surface-2); }
+  .menu-list .menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ============ EMPTY-DATA CARD ============ */
+  .nodata-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 3rem 2rem; text-align: center; max-width: 560px; margin: 4rem auto; }
+  .nodata-card h1 { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+  .nodata-card p { color: var(--text-muted); margin-bottom: 0.5rem; font-size: 13px; line-height: 1.6; }
+
+  /* ============ FOOTER ============ */
+  .site-footer { max-width: 1200px; margin: 2.5rem auto 1rem; padding: 1rem; text-align: center; font-size: 11px; color: var(--text-faint); border-top: 1px solid var(--border); line-height: 1.7; }
+  .site-footer a { color: var(--text-muted); text-decoration: none; margin: 0 4px; }
+  .site-footer a:hover { color: var(--accent); text-decoration: underline; }
+
+  @media (max-width: 700px) {
+    .app { padding: 0 0.75rem 3rem; }
+    .topbar { padding: 0.6rem 0.75rem; }
+    .infobar { gap: 0.75rem; }
+    .brand-title { font-size: 15px; }
+  }
+</style>
+<style>
+#gate{position:fixed;inset:0;z-index:9999;background:#fafaf7;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+#gate .card{background:#fff;border:1px solid #e3e1d8;border-radius:14px;max-width:420px;width:100%;padding:36px 32px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.06)}
+#gate .lock{width:44px;height:44px;border-radius:11px;background:#E6F1FB;display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+#gate .lock svg{width:22px;height:22px;stroke:#0C447C}
+#gate h1{font-size:18px;font-weight:650;margin:0 0 6px;color:#1f1e1a}
+#gate p.sub{font-size:13.5px;color:#6a685f;line-height:1.5;margin:0 0 22px}
+#gate label{display:block;font-size:12px;font-weight:600;color:#6a685f;text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px}
+#gate input{width:100%;font-size:15px;padding:12px 14px;border:1px solid #c8c5b8;border-radius:9px;outline:none;box-sizing:border-box}
+#gate input:focus{border-color:#185FA5;box-shadow:0 0 0 3px #E6F1FB}
+#gate button{width:100%;margin-top:16px;font-size:15px;font-weight:600;padding:12px;border:none;border-radius:9px;background:#185FA5;color:#fff;cursor:pointer}
+#gate button:hover{background:#0C447C}
+#gate button:disabled{opacity:.6;cursor:default}
+#gate .err{display:none;margin-top:14px;font-size:13px;color:#A32D2D;background:#FCEBEB;border:1px solid #f3d3d3;padding:9px 12px;border-radius:8px}
+#gate .foot{margin-top:22px;font-size:11.5px;color:#9a988e;line-height:1.5;border-top:1px solid #e3e1d8;padding-top:16px}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="card">
+    <div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+    <h1>PCNN Codebook Viewer</h1>
+    <p class="sub">This codebook is protected. Enter the password to unlock it.</p>
+    <label for="gate-pw">Password</label>
+    <input id="gate-pw" type="password" autocomplete="off" placeholder="Enter password">
+    <button id="gate-btn">Unlock</button>
+    <div class="err" id="gate-err"></div>
+    <div class="foot">The codebook is encrypted with AES-256 and decrypted in your browser. Nothing is uploaded.</div>
+  </div>
+</div>
+
+<!-- ============ TOP TOOLBAR ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img src="./pcnn-logo.png" alt="Post-COVID Netwerk Nederland (PCNN) logo" class="brand-logo" onerror="this.style.display='none'; document.getElementById('brand-fallback').style.display='flex';">
+      <div class="logo" id="brand-fallback" style="display: none;">📚</div>
+      <div class="brand-text">
+        <div class="brand-title">Codebook</div>
+        <div class="brand-sub">PCNN variable dictionary</div>
+      </div>
+      <span class="version-pill">v1.1 · viewer</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-secondary" onclick="openExcelDialog()" title="Download visible variables as a styled Excel file">📊 Download Excel</button>
+      <div class="menu-wrap">
+        <button class="btn-secondary" id="more-btn" onclick="toggleMoreMenu()">ℹ️ About ▾</button>
+        <div class="menu-list" id="more-menu">
+          <button onclick="closeMoreMenu(); openModal('about')">About this codebook</button>
+          <button onclick="closeMoreMenu(); openModal('contact')">Contact</button>
+          <div class="menu-divider"></div>
+          <button onclick="closeMoreMenu(); openModal('suggest')">Suggest a change / report issue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+
+<!-- ============ NO-DATA CARD (empty codebook) ============ -->
+<div class="nodata-card" id="nodata-card" style="display: none;">
+  <h1>No codebook data found</h1>
+  <p>No codebook data is bundled with this viewer. Please contact <a href="mailto:hajar.hasannejadasl@mumc.nl">hajar.hasannejadasl@mumc.nl</a> for the latest copy.</p>
+</div>
+
+<!-- ============ MAIN WORKSPACE ============ -->
+<div id="workspace" style="display: none;">
+
+  <!-- Fallback-data warning (shown when codebook.json could not be loaded) -->
+  <div id="fallback-banner" class="msg msg-warn" style="display: none; margin-bottom: 1rem;">
+    ⚠️ Could not load <code>codebook.json</code> — showing bundled sample data only. For the real codebook, open this page from the GitHub Pages URL (not by double-clicking the file).
+  </div>
+
+  <!-- Info bar: counts + copyright toggle -->
+  <div class="infobar">
+    <div class="infobar-item">
+      <span class="label">Total variables:</span>
+      <strong id="info-total-vars">—</strong>
+    </div>
+    <div class="infobar-item">
+      <span class="label">Instruments:</span>
+      <strong id="info-total-inst">—</strong>
+    </div>
+    <div class="infobar-item" style="margin-left: auto; color: var(--text-muted); font-size: 11.5px;">
+      🔒 Copyrighted instruments shown as placeholders
+    </div>
+  </div>
+
+  <!-- Instrument selector -->
+  <div class="instrument-bar">
+    <label for="instrument-select">Instrument:</label>
+    <select id="instrument-select"></select>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="variables" role="tab" onclick="switchTab('variables')">📋 Variables <span class="count" id="tab-count-vars">0</span></button>
+    <button class="tab" data-tab="search" role="tab" onclick="switchTab('search')">🔍 Search <span class="count" id="tab-count-search" style="display:none;">0</span></button>
+  </div>
+
+  <!-- ============ VARIABLES TAB ============ -->
+  <div class="tab-panel active" id="panel-variables" role="tabpanel">
+    <div class="panel-toolbar">
+      <input type="text" id="browse-search" placeholder="Filter by name or label…">
+    </div>
+    <div id="browse-list"></div>
+  </div>
+
+  <!-- ============ SEARCH TAB ============ -->
+  <div class="tab-panel" id="panel-search" role="tabpanel">
+    <div class="info-box" style="margin-top: 0;">
+      <strong>1.</strong> Pick which fields to <strong>search in</strong> (where to look).<br>
+      <strong>2.</strong> Pick which fields to <strong>show in results</strong> (the columns in the result table).<br>
+      <strong>3.</strong> Type a query.
+    </div>
+
+    <div style="display: grid; gap: 14px; margin-bottom: 1rem;">
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+          <label style="margin: 0;">1. Search in fields</label>
+          <div>
+            <button class="btn-mini" onclick="searchSelectPreset('search', 'common')">Common preset</button>
+            <button class="btn-mini" onclick="searchSelectPreset('search', 'all')">All</button>
+            <button class="btn-mini" onclick="searchSelectPreset('search', 'none')">Clear</button>
+          </div>
+        </div>
+        <div id="search-fields-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2);"></div>
+        <div class="hint" id="search-fields-summary" style="margin-top: 4px;"></div>
+      </div>
+
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+          <label style="margin: 0;">2. Show in results (columns)</label>
+          <div>
+            <button class="btn-mini" onclick="searchSelectPreset('display', 'common')">Common preset</button>
+            <button class="btn-mini" onclick="searchSelectPreset('display', 'all')">All</button>
+            <button class="btn-mini" onclick="searchSelectPreset('display', 'none')">Clear</button>
+          </div>
+        </div>
+        <div id="search-display-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2);"></div>
+        <div class="hint" id="search-display-summary" style="margin-top: 4px;"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: end;">
+        <div>
+          <label>3. Query</label>
+          <input type="text" id="search-query" placeholder="Type to search…">
+        </div>
+        <div>
+          <label>Match mode</label>
+          <select id="search-mode">
+            <option value="contains" selected>Contains (substring)</option>
+            <option value="exact">Exact match</option>
+            <option value="starts">Starts with</option>
+            <option value="regex">Regex pattern</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <label style="margin: 0; cursor: pointer; font-weight: 400; color: var(--text);">
+          <input type="checkbox" id="search-case-sensitive"> Case sensitive
+        </label>
+        <span class="hint" style="margin: 0;">Searches across the entire codebook (all instruments).</span>
+      </div>
+
+      <div id="search-error" class="msg msg-error" style="display: none;"></div>
+    </div>
+
+    <div id="search-results-header" style="display: none; padding: 8px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; font-size: 12.5px; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;"></div>
+    <div id="search-results-table" style="display: none; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--surface);"></div>
+    <div id="search-empty" class="empty-state" style="display: none;">No matches yet. Pick fields and type a query above.</div>
+  </div>
+
+</div> <!-- /workspace -->
+
+<!-- ============ MODALS ============ -->
+
+<!-- View modal -->
+<div class="modal-overlay" id="modal-view" style="display: none;">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-view-title">Variable</div>
+        <div class="modal-sub" id="modal-view-sub"></div>
+      </div>
+      <button class="btn-mini" onclick="closeModal('view')">Close</button>
+    </div>
+    <div class="modal-body" id="modal-view-body"></div>
+  </div>
+</div>
+
+<!-- Excel export modal -->
+<div class="modal-overlay" id="modal-excel" style="display: none;">
+  <div class="modal" style="max-width: 720px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📊 Download as Excel</div>
+        <div class="modal-sub">Pick layout and which instruments to include</div>
+      </div>
+      <button class="btn-mini" onclick="closeModal('excel')">Close</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 1.1rem;">
+        <label>Layout</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <label class="layout-option">
+            <input type="radio" name="excel-layout" value="single" checked>
+            <strong style="font-size: 13px;">Single sheet</strong>
+            <div class="hint" style="margin-top: 2px;">All variables in one sheet</div>
+          </label>
+          <label class="layout-option">
+            <input type="radio" name="excel-layout" value="per-instrument">
+            <strong style="font-size: 13px;">One sheet per instrument</strong>
+            <div class="hint" style="margin-top: 2px;">Separate tab for each questionnaire</div>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 1.1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label style="margin: 0;">Instruments to include</label>
+          <div>
+            <button class="btn-mini" onclick="excelSelectAll(true)">All</button>
+            <button class="btn-mini" onclick="excelSelectAll(false)">None</button>
+          </div>
+        </div>
+        <div id="excel-instruments-list" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--surface);"></div>
+        <div class="hint" id="excel-inst-summary" style="margin-top: 5px;"></div>
+      </div>
+
+      <div class="info-box" style="margin-top: 0;">
+        Columns: Theme, Subdomain, Instrument, Variable name CBS, Variable label (NL/EN), Value label (NL/EN), and Standardized name (FAIR coding). Copyrighted instruments are replaced with a contact-email placeholder.
+      </div>
+
+      <div id="excel-error" class="msg msg-error" style="display: none;"></div>
+      <div id="excel-loading" class="hint" style="display: none;">Loading Excel library… (one-time download from CDN)</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('excel')">Cancel</button>
+      <button class="btn-primary" id="excel-download-btn" onclick="generateAndDownloadExcel()">Download Excel ↓</button>
+    </div>
+  </div>
+</div>
+
+<!-- About modal -->
+<div class="modal-overlay" id="modal-about" style="display: none;">
+  <div class="modal" style="max-width: 620px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">About this codebook</div>
+        <div class="modal-sub">PCNN variable dictionary — researcher viewer v1.1</div>
+      </div>
+      <button class="btn-mini" onclick="closeModal('about')">Close</button>
+    </div>
+    <div class="modal-body" style="font-size: 13px; line-height: 1.7;">
+      <p>The <strong>PCNN Codebook</strong> is the variable dictionary for the <strong>Post-COVID Network Netherlands</strong>, a national collaborative research initiative funded by <strong>ZonMw</strong>. It documents the validated questionnaires used across PCNN sub-studies (PROMIS-29, DSQ family, EQ-5D-5L, COMPASS-31, Pain DETECT, SF-36, and others) and aims to support FAIR (Findable, Accessible, Interoperable, Reusable) data alignment across the network.</p>
+
+      <p style="margin-top: 12px;">This viewer is a <strong>read-only</strong>, self-contained copy of the codebook intended for principal investigators and study staff. Editing is done by the codebook owner in a separate editor; updated viewers are re-published as the codebook evolves.</p>
+
+      <p style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">The codebook data lives in <code>codebook.json</code> next to this HTML on GitHub Pages. When the codebook is updated, only <code>codebook.json</code> changes — this HTML stays the same. Refresh the page to see the latest version.</p>
+
+      <hr class="sep">
+
+      <p><strong>Viewer version:</strong> v1.1 · researcher viewer<br>
+      <strong>Last updated:</strong> <span id="about-last-edited">—</span></p>
+
+      <hr class="sep">
+
+      <p style="font-size: 12.5px; color: var(--text-muted);"><strong>Built by</strong> Hajar Hasannejadasl — Maastricht University Medical Centre+ (MUMC+). Developed within the <strong>Post-COVID Network Netherlands (PCNN)</strong>, funded by <strong>ZonMw</strong>.</p>
+
+      <p style="margin-top: 10px; font-size: 12.5px; color: var(--text-muted);"><strong>License:</strong> Built within the PCNN project. Read-only viewer for project use; not for redistribution outside the PCNN network without permission.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Contact modal -->
+<div class="modal-overlay" id="modal-contact" style="display: none;">
+  <div class="modal" style="max-width: 520px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Contact</div>
+        <div class="modal-sub">Questions about the codebook? Get in touch.</div>
+      </div>
+      <button class="btn-mini" onclick="closeModal('contact')">Close</button>
+    </div>
+    <div class="modal-body" style="font-size: 13px; line-height: 1.8;">
+      <p>For questions about the codebook, please get in touch:</p>
+      <p style="margin-top: 10px;">
+        <strong>Hajar Hasannejadasl</strong><br>
+        Maastricht University Medical Centre+ (MUMC+)<br>
+        <a href="mailto:hajar.hasannejadasl@mumc.nl">hajar.hasannejadasl@mumc.nl</a>
+      </p>
+      <p style="margin-top: 14px;">
+        <strong>Bianca Boxma-de Klerk</strong><br>
+        Leiden University Medical Center (LUMC)<br>
+        <a href="mailto:b.m.boxma-de_klerk@lumc.nl">b.m.boxma-de_klerk@lumc.nl</a>
+      </p>
+
+      <hr class="sep">
+
+      <p style="font-size: 12px; color: var(--text-muted);">For project-wide questions about PCNN itself, please contact the PCNN coordination team through your usual project channels.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Suggest a change modal -->
+<div class="modal-overlay" id="modal-suggest" style="display: none;">
+  <div class="modal" style="max-width: 580px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Suggest a change</div>
+        <div class="modal-sub">Help us keep the codebook accurate</div>
+      </div>
+      <button class="btn-mini" onclick="closeModal('suggest')">Close</button>
+    </div>
+    <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
+
+      <p style="color: var(--text-muted); margin-bottom: 1.1rem;">Fill in what's relevant — your email client will open with everything pre-filled, so all you need to do is hit Send.</p>
+
+      <div class="form-row">
+        <label for="suggest-type">What kind of change?</label>
+        <select id="suggest-type">
+          <option value="Typo or wording fix">Typo or wording fix</option>
+          <option value="Incorrect value label">Incorrect value label</option>
+          <option value="Missing variable">Missing variable</option>
+          <option value="Incorrect FAIR / standardized name">Incorrect FAIR / standardized name</option>
+          <option value="Question about a variable">Question about a variable</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="suggest-varname">Variable name (if applicable)</label>
+        <input type="text" id="suggest-varname" placeholder="e.g. promis_pf_01">
+      </div>
+
+      <div class="form-row">
+        <label for="suggest-instrument">Instrument (if applicable)</label>
+        <input type="text" id="suggest-instrument" placeholder="e.g. PROMIS-29">
+      </div>
+
+      <div class="form-row">
+        <label for="suggest-current">What's currently there</label>
+        <textarea id="suggest-current" rows="2" placeholder="What does the codebook say now?"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="suggest-proposed">What it should be</label>
+        <textarea id="suggest-proposed" rows="2" placeholder="What's the correction or addition?"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="suggest-name">Your name (optional)</label>
+        <input type="text" id="suggest-name" placeholder="Your name and affiliation">
+      </div>
+
+      <div id="suggest-error" class="msg msg-error" style="display: none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('suggest')">Cancel</button>
+      <button class="btn-primary" onclick="submitSuggestion()">✉️ Open email to send</button>
+    </div>
+  </div>
+</div>
+
+</div> <!-- /app -->
+
+<footer class="site-footer">
+  Codebook Viewer v1.1 · Post-COVID Network Netherlands (PCNN), funded by ZonMw ·
+  <a href="javascript:void(0)" onclick="openModal('about')">About</a> ·
+  <a href="javascript:void(0)" onclick="openModal('contact')">Contact</a> ·
+  <a href="javascript:void(0)" onclick="openModal('suggest')">Suggest a change</a>
+  <span style="opacity: 0.35; margin-left: 14px;">·
+    <a href="javascript:void(0)" onclick="document.getElementById('dev-file-input').click()" title="Load a JSON file from disk to test in this session only — does NOT save or share">⚙ Load JSON (test)</a>
+  </span>
+  <input type="file" id="dev-file-input" accept=".json,application/json" style="display:none" onchange="devLoadJsonFile(event)">
+</footer>
+
+<script>
+"use strict";
+
+// ====== CODEBOOK DATA SOURCE ======
+// The viewer loads its data from an external file `codebook.json` placed next
+// to this HTML on GitHub Pages. To update the codebook, replace ONLY
+// `codebook.json` in the repo — this HTML file does not need to change.
+//
+// Local-file mode (file:// double-click): fetch() of a relative URL fails in
+// most browsers under file://, so a tiny fallback dataset is bundled below as
+// FALLBACK_CODEBOOK. It is used only when fetch() can't load codebook.json.
+// For real use, host this file on GitHub Pages so fetch() works.
+const CODEBOOK_URL = "./codebook.json";
+
+const FALLBACK_CODEBOOK = {
+  "_meta": {
+    "tool": "Codebook Editor",
+    "tool_version": "v4.8",
+    "last_edited": "2026-05-21",
+    "contact_email": "hajar.hasannejadasl@mumc.nl",
+    "note": "This is bundled fallback data shown when codebook.json cannot be loaded (e.g. opened via file:// instead of GitHub Pages)."
+  },
+  "variables": [
+    {
+      "id": "demo-001",
+      "Theme": "Quality of life",
+      "Subdomain": "Physical health",
+      "Instrument": "PROMIS-29",
+      "variable_name_CBS": "promis_pf_01",
+      "variable_label_NL": "Bent u in staat om huishoudelijke taken uit te voeren?",
+      "variable_label_EN": "Are you able to do chores such as vacuuming or yard work?",
+      "value_labels_NL": "1 = Zonder enige moeite\n5 = Niet in staat om dit te doen",
+      "value_labels_EN": "1 = Without any difficulty\n5 = Unable to do",
+      "variable_name_FAIR_merged": "promis29_physical_function_chores",
+      "copyright_status": "restricted"
+    },
+    {
+      "id": "demo-002",
+      "Theme": "Post-exertional malaise",
+      "Subdomain": "Symptom severity",
+      "Instrument": "DSQ-PEM + DSQ-2",
+      "variable_name_CBS": "dsq_pem_02",
+      "variable_label_NL": "Hoe ernstig was de uitputting?",
+      "variable_label_EN": "How severe was the fatigue?",
+      "value_labels_NL": "0 = Geen\n4 = Zeer ernstig",
+      "value_labels_EN": "0 = None\n4 = Very severe",
+      "variable_name_FAIR_merged": "dsq_pem_fatigue_severity",
+      "copyright_status": "public"
+    },
+    {
+      "id": "demo-003",
+      "Theme": "Demographics",
+      "Subdomain": "Background",
+      "Instrument": "PCNN core",
+      "variable_name_CBS": "demo_age",
+      "variable_label_NL": "Leeftijd in jaren",
+      "variable_label_EN": "Age in years",
+      "value_labels_NL": "",
+      "value_labels_EN": "",
+      "variable_name_FAIR_merged": "demographics_age_years",
+      "copyright_status": "public"
+    }
+  ]
+};
+// ====== END CODEBOOK DATA SOURCE ======
+
+
+// ============ VIEWER FIELD ALLOWLIST ============
+// The viewer shows ONLY these fields, in this order, with these display names.
+// Anything else in the JSON is silently dropped.
+const VIEWER_FIELDS = [
+  { label: "Theme",                                key: "Theme" },
+  { label: "Subdomain",                            key: "Subdomain" },
+  { label: "Instrument",                           key: "Instrument" },
+  { label: "Variable name CBS",                    key: "variable_name_CBS" },
+  { label: "Variable label (NL)",                  key: "variable_label_NL" },
+  { label: "Variable label (EN)",                  key: "variable_label_EN" },
+  { label: "Value label (NL)",                     key: "value_labels_NL" },
+  { label: "Value label (EN)",                     key: "value_labels_EN" },
+  { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
+];
+
+const TOOL_VERSION = "v1.1";
+const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
+const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
+
+// ============ STATE ============
+const state = {
+  variables: [],                  // raw variables loaded from codebook.json (or FALLBACK_CODEBOOK)
+  meta: {},                       // _meta block (if present)
+  instrumentField: "Instrument",  // fixed for the viewer
+  identifierField: "variable_name_CBS",  // fixed; only used internally for the View-dialog title
+  selectedInstrument: "",
+  respectCopyright: true,   // always on — copyright is non-negotiable in the viewer
+  contactEmail: "hajar.hasannejadasl@mumc.nl",
+  currentTab: "variables",
+};
+
+// ============ INITIALISATION ============
+
+// Try to load codebook.json from the same directory; if that fails (e.g. opened
+// via file:// or running offline without the JSON file present), fall back to
+// the small bundled FALLBACK_CODEBOOK so the page still renders something.
+async function init() {
+  // Set up event wiring FIRST so it works regardless of which data path runs
+  document.getElementById("instrument-select").addEventListener("change", function() {
+    state.selectedInstrument = this.value;
+    BROWSE_STATE.currentPage = 0;
+    refreshVariablesTab();
+  });
+  document.getElementById("search-query").addEventListener("input", debouncedSearch);
+  document.getElementById("search-mode").addEventListener("change", debouncedSearch);
+  document.getElementById("search-case-sensitive").addEventListener("change", debouncedSearch);
+  document.getElementById("browse-search").addEventListener("input", () => {
+    BROWSE_STATE.currentPage = 0;
+    refreshVariablesTab();
+  });
+  document.querySelectorAll(".modal-overlay").forEach(ov => {
+    ov.addEventListener("click", e => { if (e.target === ov) ov.style.display = "none"; });
+  });
+  document.addEventListener("click", e => {
+    const menu = document.getElementById("more-menu");
+    const btn  = document.getElementById("more-btn");
+    if (menu && menu.classList.contains("open") && !menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove("open");
+    }
+  });
+
+  // Data is loaded only after the user enters the password (see gateUnlock).
+  setupGate();
+}
+
+// Take a parsed JSON payload and wire it into state + render everything
+function applyLoadedPayload(payload, loadedFromUrl) {
+  let data = null;
+  let meta = {};
+  if (payload && Array.isArray(payload.variables)) {
+    data = payload.variables;
+    meta = payload._meta || {};
+  } else if (Array.isArray(payload)) {
+    data = payload;
+  } else if (payload && typeof payload === "object") {
+    for (const k of ["items", "records", "data", "codebook"]) {
+      if (Array.isArray(payload[k])) { data = payload[k]; meta = payload._meta || {}; break; }
+    }
+  }
+
+  if (!data || data.length === 0) {
+    document.getElementById("nodata-card").style.display = "block";
+    document.getElementById("workspace").style.display = "none";
+    return;
+  }
+
+  state.variables = data;
+  // FAIR fallback: when variable_name_FAIR_merged is empty, fall back to
+  // variable_name_FAIR so the "Standardized name (FAIR coding)" column always
+  // shows the best available value (used everywhere: display, search, export).
+  for (const v of state.variables) {
+    const merged = (v.variable_name_FAIR_merged == null ? "" : String(v.variable_name_FAIR_merged)).trim();
+    if (!merged) {
+      const alt = (v.variable_name_FAIR == null ? "" : String(v.variable_name_FAIR)).trim();
+      if (alt) v.variable_name_FAIR_merged = v.variable_name_FAIR;
+    }
+  }
+  state.meta = meta;
+  state.contactEmail = (meta && meta.contact_email) || "hajar.hasannejadasl@mumc.nl";
+
+  // Show workspace
+  document.getElementById("nodata-card").style.display = "none";
+  document.getElementById("workspace").style.display = "block";
+
+  // Header info
+  document.getElementById("info-total-vars").textContent = data.length;
+  const prettyDate = formatLastEdited(meta.last_edited);
+  { const _e = document.getElementById("info-last-updated"); if (_e) _e.textContent = prettyDate; }
+  document.getElementById("about-last-edited").textContent = prettyDate;
+  const _avc = document.getElementById("about-var-count"); if (_avc) _avc.textContent = data.length;
+
+  // If we're using the fallback (not the real codebook.json), show a small
+  // warning banner so it's never mistaken for the real data.
+  const banner = document.getElementById("fallback-banner");
+  if (banner) banner.style.display = loadedFromUrl ? "none" : "block";
+
+  populateInstruments();
+  switchTab("variables");
+}
+
+// ============ INSTRUMENT GROUPING (atomic + family) ============
+// Copied behaviour from the editor: split "A + B" into atoms, group by co-occurrence
+// in "+" combos AND by shared leading-letter prefix, then render as optgroups.
+
+function splitInstrumentName(s) {
+  if (!s) return [];
+  return String(s).split(/\s*\+\s*/).map(p => p.trim()).filter(Boolean);
+}
+
+function variableBelongsTo(v, atomicName) {
+  if (!v || !atomicName) return false;
+  return splitInstrumentName(v[state.instrumentField]).includes(atomicName);
+}
+
+// Apply current copyright-toggle filter to the raw variable list.
+// In the viewer we filter at the *row* level for browsing / search; instruments
+// that become fully empty after filtering are kept in the dropdown so the user
+// understands one is being hidden — but the rows themselves show as a placeholder.
+function getVisibleVariables() {
+  // For Variables tab and Search tab counts, we use the full list and inject
+  // placeholders per restricted instrument when respectCopyright is on.
+  return state.variables;
+}
+
+function isVariableRestricted(v) {
+  const cs = v.copyright_status;
+  if (cs !== undefined && cs !== null && String(cs).trim() !== "") {
+    const s = String(cs).trim().toLowerCase();
+    return !(s === "public" || s === "licensed");
+  }
+  const pa = v.public_access;
+  if (pa !== undefined && pa !== null && String(pa).trim() !== "") {
+    const s = String(pa).trim().toLowerCase();
+    return !(s === "yes" || s === "y" || s === "true" || s === "1");
+  }
+  return false;
+}
+
+// Restricted atoms: atomic instruments where any variable is marked restricted
+function computeRestrictedAtoms() {
+  const restricted = new Set();
+  state.variables.forEach(v => {
+    if (isVariableRestricted(v)) {
+      splitInstrumentName(v[state.instrumentField]).forEach(a => restricted.add(a));
+    }
+  });
+  return restricted;
+}
+
+function getVarsForInstrument(atomicName) {
+  if (!atomicName) return [];
+  return state.variables.filter(v => variableBelongsTo(v, atomicName));
+}
+
+// Count atomic-instrument variables (used for the dropdown label)
+function countVarsForAtomic(name) {
+  let n = 0;
+  state.variables.forEach(v => {
+    if (variableBelongsTo(v, name)) n++;
+  });
+  return n;
+}
+
+function populateInstruments() {
+  const atomicCounts = {};
+  state.variables.forEach(r => {
+    splitInstrumentName(r[state.instrumentField]).forEach(atom => {
+      atomicCounts[atom] = (atomicCounts[atom] || 0) + 1;
+    });
+  });
+  const atomicNames = Object.keys(atomicCounts).sort();
+
+  const select = document.getElementById("instrument-select");
+  const families = detectFamilies(atomicNames);
+
+  select.innerHTML = '<option value="">— Select an instrument —</option>';
+  families.orphans.forEach(name => {
+    select.appendChild(buildInstrumentOption(name, atomicCounts));
+  });
+  for (const [familyName, members] of families.groups) {
+    const og = document.createElement("optgroup");
+    og.label = `📁 ${familyName} family — ${members.length} questionnaires`;
+    members.forEach(name => og.appendChild(buildInstrumentOption(name, atomicCounts)));
+    select.appendChild(og);
+  }
+
+  // Update count in infobar
+  document.getElementById("info-total-inst").textContent = atomicNames.length;
+}
+
+function buildInstrumentOption(name, counts) {
+  const opt = document.createElement("option");
+  opt.value = name;
+  const c = counts[name];
+  opt.textContent = `${name}  (${c} variable${c === 1 ? "" : "s"})`;
+  return opt;
+}
+
+function detectFamilies(atomicNames) {
+  // Union-find by co-occurrence in "+" combinations
+  const parent = new Map();
+  atomicNames.forEach(a => parent.set(a, a));
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
+
+  state.variables.forEach(r => {
+    const parts = splitInstrumentName(r[state.instrumentField]);
+    if (parts.length < 2) return;
+    for (let i = 1; i < parts.length; i++) union(parts[0], parts[i]);
+  });
+
+  // Also union by leading-letter prefix (≥3 chars) — PROMIS-29 & PROMIS-SF anxiety go in one family
+  const prefixOf = (s) => {
+    const m = String(s).match(/^([A-Za-z]+)/);
+    return m ? m[1] : "";
+  };
+  const byPrefix = new Map();
+  atomicNames.forEach(a => {
+    const p = prefixOf(a);
+    if (p.length < 3) return;
+    if (!byPrefix.has(p)) byPrefix.set(p, []);
+    byPrefix.get(p).push(a);
+  });
+  byPrefix.forEach((atoms) => {
+    if (atoms.length < 2) return;
+    for (let i = 1; i < atoms.length; i++) union(atoms[0], atoms[i]);
+  });
+
+  // Group by root
+  const familyMembers = new Map();
+  atomicNames.forEach(a => {
+    const root = find(a);
+    if (!familyMembers.has(root)) familyMembers.set(root, []);
+    familyMembers.get(root).push(a);
+  });
+
+  const orphans = [];
+  const groups = new Map();
+  for (const [, members] of familyMembers) {
+    if (members.length <= 1) { orphans.push(...members); continue; }
+    // Family display name = the most common prefix among members
+    const prefixCounts = {};
+    members.forEach(m => { const p = prefixOf(m); if (p) prefixCounts[p] = (prefixCounts[p] || 0) + 1; });
+    const familyPrefix = Object.keys(prefixCounts).sort((a, b) => prefixCounts[b] - prefixCounts[a])[0] || "";
+    members.sort((a, b) => countVarsForAtomic(b) - countVarsForAtomic(a));
+    groups.set(familyPrefix || members[0], members);
+  }
+  orphans.sort();
+  return { orphans, groups };
+}
+
+// ============ TABS ============
+function switchTab(name) {
+  state.currentTab = name;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + name));
+  if (name === "variables") refreshVariablesTab();
+  else if (name === "search") refreshSearchTab();
+}
+
+// ============ VARIABLES TAB ============
+
+// Column class for each VIEWER_FIELDS key (matches CSS .col-* selectors)
+const COLUMN_CLASS = {
+  Theme:                     "col-theme",
+  Subdomain:                 "col-subdomain",
+  Instrument:                "col-instrument",
+  variable_name_CBS:         "col-varname",
+  variable_label_NL:         "col-label-nl",
+  variable_label_EN:         "col-label-en",
+  value_labels_NL:           "col-value-nl",
+  value_labels_EN:           "col-value-en",
+  variable_name_FAIR_merged:   "col-fair",
+};
+
+// Pagination settings
+const PAGE_SIZE_OPTIONS = [10, 20, 30];
+const BROWSE_STATE = { currentPage: 0, pageSize: 30 };
+
+function refreshVariablesTab() {
+  const inst = state.selectedInstrument;
+  const search = (document.getElementById("browse-search").value || "").toLowerCase().trim();
+  const listEl = document.getElementById("browse-list");
+
+  // Empty-state when no instrument selected: prompt the user to pick one.
+  // (We do NOT show all variables at once — the codebook is too large for that.)
+  if (!inst) {
+    document.getElementById("tab-count-vars").textContent = "0";
+    state._currentlyDisplayedRows = [];
+    listEl.innerHTML = `<div class="empty-state">
+      <div style="font-size: 38px; margin-bottom: 10px; opacity: 0.4;">📋</div>
+      <p style="font-size: 14px; margin-bottom: 4px;">Select an instrument above to browse its variables.</p>
+      <p style="font-size: 12px; color: var(--text-faint);">Or use the <strong>🔍 Search</strong> tab to search across all instruments at once.</p>
+    </div>`;
+    return;
+  }
+
+  // Pick rows that belong to the selected instrument
+  let rows = getVarsForInstrument(inst);
+
+  // Copyright filter: replace restricted instruments with placeholder rows
+  const restrictedAtoms = computeRestrictedAtoms();
+  const renderRows = [];
+  const visibleRestrictedAtoms = new Set();
+  rows.forEach(v => {
+    const atoms = splitInstrumentName(v[state.instrumentField]);
+    const allRestricted = atoms.length > 0 && atoms.every(a => restrictedAtoms.has(a));
+    if (allRestricted) atoms.forEach(a => visibleRestrictedAtoms.add(a));
+    else renderRows.push(v);
+  });
+  [...visibleRestrictedAtoms].sort().forEach(atom => {
+    if (atom !== inst) return;
+    renderRows.push({ _placeholder: true, Instrument: atom });
+  });
+
+  // Text filter (applies to all VIEWER_FIELDS, case-insensitive)
+  const filtered = renderRows.filter(v => {
+    if (!search) return true;
+    if (v._placeholder) {
+      return String(v.Instrument || "").toLowerCase().includes(search);
+    }
+    return VIEWER_KEYS.some(k => {
+      const val = v[k];
+      return val != null && String(val).toLowerCase().includes(search);
+    });
+  });
+
+  document.getElementById("tab-count-vars").textContent = filtered.length;
+  state._currentlyDisplayedRows = filtered;
+
+  if (filtered.length === 0) {
+    if (search) {
+      listEl.innerHTML = `<div class="empty-state">No variables in <strong>${escapeHtml(inst)}</strong> match “${escapeHtml(search)}”.</div>`;
+    } else {
+      listEl.innerHTML = `<div class="empty-state">No variables in <strong>${escapeHtml(inst)}</strong>.</div>`;
+    }
+    return;
+  }
+
+  // Pagination: clamp current page to valid range
+  const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_STATE.pageSize));
+  if (BROWSE_STATE.currentPage >= totalPages) BROWSE_STATE.currentPage = totalPages - 1;
+  if (BROWSE_STATE.currentPage < 0) BROWSE_STATE.currentPage = 0;
+  const startIdx = BROWSE_STATE.currentPage * BROWSE_STATE.pageSize;
+  const endIdx = Math.min(startIdx + BROWSE_STATE.pageSize, filtered.length);
+  const pageRows = filtered.slice(startIdx, endIdx);
+
+  // Total columns: # · Actions · all VIEWER_FIELDS
+  const totalCols = 2 + VIEWER_FIELDS.length;
+
+  const headerHtml = `<tr>
+    <th class="col-idx">#</th>
+    ${VIEWER_FIELDS.map(f => `<th class="${COLUMN_CLASS[f.key] || ''}">${escapeHtml(f.label)}</th>`).join("")}
+  </tr>`;
+
+  // Render rows. The displayed "#" is the absolute index in `filtered` so
+  // numbering stays consistent across pages. The View button passes the
+  // absolute index into state._currentlyDisplayedRows.
+  const bodyRows = pageRows.map((v, pageOffset) => {
+    const absoluteIdx = startIdx + pageOffset;
+    if (v._placeholder) {
+      const contactEmail = state.contactEmail;
+      const mailtoSubject = encodeURIComponent(`[PCNN Codebook] Access request: ${v.Instrument}`);
+      return `<tr class="restricted-row">
+        <td class="col-idx">${absoluteIdx + 1}</td>
+        <td colspan="${totalCols - 1}">
+          <div class="restricted-content">
+            <span class="restricted-icon">🔒</span>
+            <span class="restricted-name">${escapeHtml(v.Instrument)}</span>
+            <span class="restricted-msg">
+              This questionnaire is copyrighted. Contact for the full item list.
+            </span>
+          </div>
+        </td>
+      </tr>`;
+    }
+
+    const cells = VIEWER_FIELDS.map(f => {
+      const val = v[f.key];
+      const isEmpty = val === undefined || val === null || val === "";
+      const text = isEmpty ? "" : String(val);
+      const truncated = text.length > 240 ? text.slice(0, 240) + "…" : text;
+      const colClass = COLUMN_CLASS[f.key] || "";
+      const emptyClass = isEmpty ? "cell-empty" : "";
+      return `<td class="${colClass} ${emptyClass}">${isEmpty ? '—' : escapeHtml(truncated)}</td>`;
+    }).join("");
+
+    return `<tr>
+      <td class="col-idx">${absoluteIdx + 1}</td>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  // Pagination controls (always show the per-page selector; nav buttons only if > 1 page)
+  const navButtons = totalPages > 1 ? `
+      <button class="btn-mini" onclick="goToPage(0)" ${BROWSE_STATE.currentPage === 0 ? "disabled" : ""}>« First</button>
+      <button class="btn-mini" onclick="goToPage(${BROWSE_STATE.currentPage - 1})" ${BROWSE_STATE.currentPage === 0 ? "disabled" : ""}>‹ Previous</button>
+      <button class="btn-mini" onclick="goToPage(${BROWSE_STATE.currentPage + 1})" ${BROWSE_STATE.currentPage >= totalPages - 1 ? "disabled" : ""}>Next ›</button>
+      <button class="btn-mini" onclick="goToPage(${totalPages - 1})" ${BROWSE_STATE.currentPage >= totalPages - 1 ? "disabled" : ""}>Last »</button>
+  ` : "";
+
+  const pageSizeSelector = `
+    <label class="page-size-picker">
+      <span style="color: var(--text-muted); font-size: 12px;">Per page:</span>
+      <select onchange="setPageSize(this.value)">
+        ${PAGE_SIZE_OPTIONS.map(n =>
+          `<option value="${n}" ${n === BROWSE_STATE.pageSize ? "selected" : ""}>${n}</option>`
+        ).join("")}
+      </select>
+    </label>`;
+
+  const paginationHtml = `
+    <div class="pagination">
+      ${pageSizeSelector}
+      <span class="pagination-info">
+        Showing <strong>${startIdx + 1}</strong>–<strong>${endIdx}</strong> of <strong>${filtered.length}</strong>${totalPages > 1 ? ` · Page <strong>${BROWSE_STATE.currentPage + 1}</strong> of <strong>${totalPages}</strong>` : ""}
+      </span>
+      ${navButtons}
+    </div>
+  `;
+
+  listEl.innerHTML = `${paginationHtml}
+  <div class="vars-table-wrap">
+    <!-- Top scroller mirrors the bottom one so users can scroll horizontally without going to the bottom of the page -->
+    <div class="vars-table-topscroll"><div class="vars-table-topscroll-inner"></div></div>
+    <div class="vars-table-scroll">
+      <table class="vars-table">
+        <thead>${headerHtml}</thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+  </div>
+  ${paginationHtml}`;
+
+  // After render: size the top-scroll inner div to the table's width, and sync scrollLeft between top and bottom.
+  syncTopScroller();
+}
+
+// Wire up the "fake" top scrollbar to mirror the real bottom one.
+function syncTopScroller() {
+  const top    = document.querySelector(".vars-table-topscroll");
+  const inner  = document.querySelector(".vars-table-topscroll-inner");
+  const bottom = document.querySelector(".vars-table-scroll");
+  const table  = bottom && bottom.querySelector(".vars-table");
+  if (!top || !inner || !bottom || !table) return;
+
+  // Mirror the table's scrollWidth onto the dummy inner div
+  const setWidth = () => { inner.style.width = table.scrollWidth + "px"; };
+  setWidth();
+
+  // Hide top scrollbar entirely if there's nothing to scroll horizontally
+  if (table.scrollWidth <= bottom.clientWidth + 1) {
+    top.style.display = "none";
+    return;
+  }
+  top.style.display = "block";
+
+  // Two-way sync — guard against echo loops
+  let syncing = false;
+  top.addEventListener("scroll", () => {
+    if (syncing) return;
+    syncing = true; bottom.scrollLeft = top.scrollLeft; syncing = false;
+  });
+  bottom.addEventListener("scroll", () => {
+    if (syncing) return;
+    syncing = true; top.scrollLeft = bottom.scrollLeft; syncing = false;
+  });
+
+  // Re-measure on window resize (column widths may reflow)
+  window.addEventListener("resize", setWidth, { passive: true });
+}
+
+function goToPage(page) {
+  BROWSE_STATE.currentPage = page;
+  refreshVariablesTab();
+  // Scroll table back to top when paginating
+  const wrap = document.querySelector(".vars-table-wrap");
+  if (wrap) wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function setPageSize(n) {
+  BROWSE_STATE.pageSize = parseInt(n, 10) || 30;
+  BROWSE_STATE.currentPage = 0;
+  refreshVariablesTab();
+}
+
+// ============ SEARCH TAB ============
+const SEARCH_STATE = {
+  searchInFields: new Set(),
+  displayFields: new Set(),
+  initialized: false,
+  debounceTimer: null,
+  lastMatches: [],
+  lastFieldsShown: [],
+};
+
+const SEARCH_PRESET_COMMON = [
+  "variable_name_CBS",
+  "Instrument",
+  "variable_label_EN",
+  "value_labels_EN",
+];
+
+function refreshSearchTab() {
+  if (!SEARCH_STATE.initialized) {
+    SEARCH_STATE.initialized = true;
+    // Default to common preset
+    SEARCH_STATE.searchInFields = new Set(SEARCH_PRESET_COMMON.filter(k => VIEWER_KEYS.includes(k)));
+    SEARCH_STATE.displayFields  = new Set(SEARCH_PRESET_COMMON.filter(k => VIEWER_KEYS.includes(k)));
+  }
+  renderSearchFieldsGrid("search");
+  renderSearchFieldsGrid("display");
+  runSearch();
+}
+
+function renderSearchFieldsGrid(which) {
+  const gridId = which === "search" ? "search-fields-grid" : "search-display-grid";
+  const grid = document.getElementById(gridId);
+  const selectedSet = which === "search" ? SEARCH_STATE.searchInFields : SEARCH_STATE.displayFields;
+  const dataAttr = which === "search" ? "data-search-field" : "data-display-field";
+
+  grid.innerHTML = VIEWER_FIELDS.map(f => {
+    const checked = selectedSet.has(f.key) ? "checked" : "";
+    return `<label style="display: flex; align-items: center; padding: 3px 4px; font-weight: 400; color: var(--text); margin: 0; cursor: pointer; font-size: 12.5px;">
+      <input type="checkbox" ${dataAttr}="${escapeAttr(f.key)}" ${checked} style="margin-right: 6px;">
+      <span>${escapeHtml(f.label)}</span>
+    </label>`;
+  }).join("");
+
+  grid.querySelectorAll(`input[${dataAttr}]`).forEach(cb => {
+    cb.addEventListener("change", () => {
+      const k = cb.getAttribute(dataAttr);
+      if (cb.checked) selectedSet.add(k); else selectedSet.delete(k);
+      updateSearchFieldsSummary();
+      debouncedSearch();
+    });
+  });
+  updateSearchFieldsSummary();
+}
+
+function updateSearchFieldsSummary() {
+  const s = SEARCH_STATE.searchInFields.size;
+  const d = SEARCH_STATE.displayFields.size;
+  document.getElementById("search-fields-summary").innerHTML = s === 0
+    ? "<em style='color: var(--danger);'>Pick at least one field to search in</em>"
+    : `Searching in <strong>${s}</strong> field${s === 1 ? "" : "s"}`;
+  document.getElementById("search-display-summary").innerHTML = d === 0
+    ? "<em style='color: var(--danger);'>Pick at least one column to show in results</em>"
+    : `Showing <strong>${d}</strong> column${d === 1 ? "" : "s"} in results`;
+}
+
+function searchSelectPreset(which, preset) {
+  if (preset === "all") {
+    const all = VIEWER_KEYS.slice();
+    if (which === "search") SEARCH_STATE.searchInFields = new Set(all);
+    else SEARCH_STATE.displayFields = new Set(all);
+  } else if (preset === "none") {
+    if (which === "search") SEARCH_STATE.searchInFields = new Set();
+    else SEARCH_STATE.displayFields = new Set();
+  } else if (preset === "common") {
+    const common = SEARCH_PRESET_COMMON.filter(k => VIEWER_KEYS.includes(k));
+    if (which === "search") SEARCH_STATE.searchInFields = new Set(common);
+    else SEARCH_STATE.displayFields = new Set(common);
+  }
+  renderSearchFieldsGrid(which);
+  runSearch();
+}
+
+function debouncedSearch() {
+  if (SEARCH_STATE.debounceTimer) clearTimeout(SEARCH_STATE.debounceTimer);
+  SEARCH_STATE.debounceTimer = setTimeout(runSearch, 180);
+}
+
+function runSearch() {
+  const errEl = document.getElementById("search-error");
+  errEl.style.display = "none";
+  const query = (document.getElementById("search-query").value || "");
+  const mode = document.getElementById("search-mode").value;
+  const caseSensitive = document.getElementById("search-case-sensitive").checked;
+  const searchFields = [...SEARCH_STATE.searchInFields];
+  const displayFields = [...SEARCH_STATE.displayFields].sort(
+    (a, b) => VIEWER_KEYS.indexOf(a) - VIEWER_KEYS.indexOf(b)
+  );
+  const resultsEl = document.getElementById("search-results-table");
+  const headerEl  = document.getElementById("search-results-header");
+  const emptyEl   = document.getElementById("search-empty");
+  const tabCountEl = document.getElementById("tab-count-search");
+
+  SEARCH_STATE.lastMatches = [];
+  SEARCH_STATE.lastFieldsShown = displayFields;
+
+  if (!query.trim() || searchFields.length === 0 || displayFields.length === 0) {
+    resultsEl.style.display = "none";
+    headerEl.style.display = "none";
+    emptyEl.style.display = "block";
+    let msg = "Type a query above to start searching.";
+    if (searchFields.length === 0) msg = "Pick at least one field to search in.";
+    else if (displayFields.length === 0) msg = "Pick at least one column to show in results.";
+    emptyEl.textContent = msg;
+    tabCountEl.style.display = "none";
+    return;
+  }
+
+  let matcher;
+  try { matcher = buildMatcher(query, mode, caseSensitive); }
+  catch (e) {
+    errEl.textContent = "Invalid pattern: " + e.message;
+    errEl.style.display = "block";
+    resultsEl.style.display = "none";
+    headerEl.style.display = "none";
+    emptyEl.style.display = "none";
+    return;
+  }
+
+  // Compute restricted atoms and skip restricted variables when filter is on
+  const restrictedAtoms = state.respectCopyright ? computeRestrictedAtoms() : new Set();
+
+  const matches = [];
+  for (const v of state.variables) {
+    // Copyright filter at the row level
+    if (state.respectCopyright) {
+      const atoms = splitInstrumentName(v[state.instrumentField]);
+      const allRestricted = atoms.length > 0 && atoms.every(a => restrictedAtoms.has(a));
+      if (allRestricted) continue;
+    }
+    const hitFields = new Set();
+    for (const f of searchFields) {
+      const val = v[f];
+      if (val === undefined || val === null) continue;
+      if (matcher(String(val))) hitFields.add(f);
+    }
+    if (hitFields.size > 0) matches.push({ v, hitFields });
+  }
+
+  SEARCH_STATE.lastMatches = matches;
+
+  // Header
+  headerEl.style.display = "flex";
+  headerEl.innerHTML = `<span><strong>${matches.length}</strong> match${matches.length === 1 ? "" : "es"} for <code>${escapeHtml(query)}</code> in <strong>${searchFields.length}</strong> field${searchFields.length === 1 ? "" : "s"}${state.respectCopyright ? " · <em>respecting copyright</em>" : ""}</span>`;
+  tabCountEl.style.display = matches.length > 0 ? "inline-block" : "none";
+  tabCountEl.textContent = matches.length;
+
+  if (matches.length === 0) {
+    resultsEl.style.display = "none";
+    emptyEl.style.display = "block";
+    emptyEl.textContent = "No matches.";
+    return;
+  }
+
+  emptyEl.style.display = "none";
+  resultsEl.style.display = "block";
+
+  // Cache for View dialog lookup
+  state._lastSearchMatches = matches.map(m => m.v);
+
+  const headers = ["#", "Actions", ...displayFields.map(k => LABEL_OF[k])];
+  const rows = matches.map((m, i) => {
+    const cells = displayFields.map(f => {
+      const val = m.v[f];
+      const isEmpty = val === undefined || val === null || val === "";
+      const text = isEmpty ? "" : String(val);
+      const isHit = m.hitFields.has(f);
+      const truncated = text.length > 200 ? text.slice(0, 200) + "…" : text;
+      let html;
+      if (isHit && mode !== "regex" && query.trim()) html = highlightMatches(truncated, query, caseSensitive);
+      else html = escapeHtml(truncated);
+      const style = isHit
+        ? "background: #FFF4CE; padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--border); word-break: break-word; max-width: 360px;"
+        : "padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--border); word-break: break-word; max-width: 360px;";
+      return `<td style="${style}${isEmpty ? 'color: var(--text-faint); font-style: italic;' : ''}">${isEmpty ? '<em>(empty)</em>' : html}</td>`;
+    }).join("");
+    return `<tr>
+      <td style="padding: 6px 8px; color: var(--text-faint); font-family: var(--mono); font-size: 11px; vertical-align: top; border-bottom: 1px solid var(--border); white-space: nowrap;">${i + 1}</td>
+      <td style="padding: 6px 8px; vertical-align: top; border-bottom: 1px solid var(--border); white-space: nowrap;">
+        <button class="btn-mini" onclick="openViewDialogFromSearch(${i})">View</button>
+      </td>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  resultsEl.innerHTML = `<table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+    <thead>
+      <tr style="background: var(--surface-2);">
+        ${headers.map(h => `<th style="text-align: left; padding: 8px; font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;">${escapeHtml(h)}</th>`).join("")}
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function highlightMatches(text, query, caseSensitive) {
+  if (!query) return escapeHtml(text);
+  const escaped = query.replace(/[.*+?^${}()|\[\]\\]/g, "\\$&");
+  const re = new RegExp(escaped, caseSensitive ? "g" : "gi");
+  const parts = [];
+  let lastIdx = 0;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    parts.push(escapeHtml(text.slice(lastIdx, m.index)));
+    parts.push(`<mark style="background: #FFE066; padding: 0 2px; border-radius: 2px;">${escapeHtml(m[0])}</mark>`);
+    lastIdx = m.index + m[0].length;
+    if (m.index === re.lastIndex) re.lastIndex++;
+  }
+  parts.push(escapeHtml(text.slice(lastIdx)));
+  return parts.join("");
+}
+
+function buildMatcher(query, mode, caseSensitive) {
+  if (mode === "regex") {
+    const flags = caseSensitive ? "" : "i";
+    const re = new RegExp(query, flags);
+    return s => re.test(s);
+  }
+  if (mode === "exact") {
+    return caseSensitive ? s => s === query : s => s.toLowerCase() === query.toLowerCase();
+  }
+  if (mode === "starts") {
+    return caseSensitive ? s => s.startsWith(query) : s => s.toLowerCase().startsWith(query.toLowerCase());
+  }
+  return caseSensitive ? s => s.includes(query) : s => s.toLowerCase().includes(query.toLowerCase());
+}
+
+// ============ VIEW DIALOG ============
+function openViewDialog(rowIndex) {
+  const list = state._currentlyDisplayedRows || [];
+  const v = list[rowIndex];
+  if (!v) return;
+  if (v._placeholder) return;  // shouldn't happen — placeholder rows don't render a View button
+  renderViewDialog(v);
+}
+
+function openViewDialogFromSearch(rowIndex) {
+  const list = state._lastSearchMatches || [];
+  const v = list[rowIndex];
+  if (!v) return;
+  renderViewDialog(v);
+}
+
+function renderViewDialog(v) {
+  const titleName = v.variable_name_CBS || v.variable_label_EN || "(no name)";
+  document.getElementById("modal-view-title").textContent = titleName;
+  document.getElementById("modal-view-sub").innerHTML = `<code>${escapeHtml(v.Instrument || "—")}</code> · viewer fields only`;
+
+  const body = document.getElementById("modal-view-body");
+  body.innerHTML = VIEWER_FIELDS.map(f => {
+    const val = v[f.key];
+    const isEmpty = val === undefined || val === null || val === "";
+    const display = isEmpty ? "(empty)" : String(val);
+    return `<div class="field-readonly">
+      <div class="field-readonly-name">${escapeHtml(f.label)}</div>
+      <div class="field-readonly-value ${isEmpty ? 'empty' : ''}">${escapeHtml(display)}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("modal-view").style.display = "flex";
+}
+
+// ============ EXCEL EXPORT ============
+const EXCEL_STATE = { selectedInstruments: new Set() };
+
+function openExcelDialog() {
+  const allAtomics = getAllAtomicInstrumentNames();
+  if (allAtomics.length === 0) return;
+  EXCEL_STATE.selectedInstruments = state.selectedInstrument
+    ? new Set([state.selectedInstrument])
+    : new Set(allAtomics);
+  document.getElementById("excel-error").style.display = "none";
+  document.getElementById("excel-loading").style.display = "none";
+  renderExcelInstrumentsList();
+  document.getElementById("modal-excel").style.display = "flex";
+}
+
+function getAllAtomicInstrumentNames() {
+  const set = new Set();
+  state.variables.forEach(v => {
+    splitInstrumentName(v[state.instrumentField]).forEach(a => set.add(a));
+  });
+  return [...set].sort();
+}
+
+function renderExcelInstrumentsList() {
+  const list = document.getElementById("excel-instruments-list");
+  const instruments = getAllAtomicInstrumentNames();
+  list.innerHTML = instruments.map(name => {
+    const count = countVarsForAtomic(name);
+    const checked = EXCEL_STATE.selectedInstruments.has(name) ? "checked" : "";
+    return `<label class="excel-row">
+      <input type="checkbox" data-instrument="${escapeAttr(name)}" ${checked}>
+      <span style="flex: 1;">${escapeHtml(name)}</span>
+      <span class="count">${count} variable${count === 1 ? "" : "s"}</span>
+    </label>`;
+  }).join("");
+  list.querySelectorAll("input[type='checkbox']").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const name = cb.dataset.instrument;
+      if (cb.checked) EXCEL_STATE.selectedInstruments.add(name);
+      else EXCEL_STATE.selectedInstruments.delete(name);
+      updateExcelSummary();
+    });
+  });
+  updateExcelSummary();
+}
+
+function excelSelectAll(on) {
+  EXCEL_STATE.selectedInstruments = on ? new Set(getAllAtomicInstrumentNames()) : new Set();
+  renderExcelInstrumentsList();
+}
+
+function updateExcelSummary() {
+  document.getElementById("excel-inst-summary").textContent =
+    `${EXCEL_STATE.selectedInstruments.size} of ${getAllAtomicInstrumentNames().length} instruments selected`;
+}
+
+let _sheetJsPromise = null;
+function loadSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (_sheetJsPromise) return _sheetJsPromise;
+  document.getElementById("excel-loading").style.display = "block";
+  _sheetJsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js";
+    s.onload  = () => { document.getElementById("excel-loading").style.display = "none"; resolve(window.XLSX); };
+    s.onerror = () => { document.getElementById("excel-loading").style.display = "none"; reject(new Error("Could not load Excel library. Check your internet connection.")); };
+    document.head.appendChild(s);
+  });
+  return _sheetJsPromise;
+}
+
+// Apply copyright filter to a variable list. Restricted instruments get one placeholder
+// row each instead of their variables. Public/licensed instruments pass through unchanged.
+function applyCopyrightFilter(vars, contactEmail, info) {
+  const restrictedAtoms = computeRestrictedAtoms();
+  const result = [];
+  const hiddenByAtom = new Map();
+  vars.forEach(v => {
+    const atoms = splitInstrumentName(v[state.instrumentField]);
+    const allRestricted = atoms.length > 0 && atoms.every(a => restrictedAtoms.has(a));
+    if (allRestricted) {
+      atoms.forEach(a => hiddenByAtom.set(a, (hiddenByAtom.get(a) || 0) + 1));
+    } else {
+      result.push(v);
+    }
+  });
+  // Add one placeholder per restricted atom (only if the atom was actually hit)
+  [...restrictedAtoms].sort().forEach(atom => {
+    if (!hiddenByAtom.has(atom)) return;
+    // Only emit placeholder if the atom is among requested instruments
+    if (!EXCEL_STATE.selectedInstruments.has(atom)) return;
+    const placeholder = { _restrictedPlaceholder: true };
+    placeholder.Instrument = atom;
+    placeholder.variable_label_EN = contactEmail
+      ? `This questionnaire requires permission. Contact: ${contactEmail}`
+      : `This questionnaire requires permission. Contact the codebook owner for access.`;
+    result.push(placeholder);
+    info.restrictedInstruments.push(atom);
+    info.restrictedRowsHidden += hiddenByAtom.get(atom);
+  });
+  return result;
+}
+
+async function generateAndDownloadExcel() {
+  const errEl = document.getElementById("excel-error");
+  errEl.style.display = "none";
+  if (EXCEL_STATE.selectedInstruments.size === 0) {
+    errEl.textContent = "Select at least one instrument";
+    errEl.style.display = "block";
+    return;
+  }
+  const layout = document.querySelector('input[name="excel-layout"]:checked').value;
+  const respectCopyright = state.respectCopyright;
+  const btn = document.getElementById("excel-download-btn");
+  btn.disabled = true; btn.textContent = "Generating…";
+
+  let XLSX;
+  try { XLSX = await loadSheetJS(); }
+  catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = "block";
+    btn.disabled = false; btn.textContent = "Download Excel ↓";
+    return;
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+    // Variables whose Instrument string touches any selected atomic
+    let vars = state.variables.filter(v => {
+      const parts = splitInstrumentName(v[state.instrumentField]);
+      return parts.some(p => EXCEL_STATE.selectedInstruments.has(p));
+    });
+    const restrictedInfo = { restrictedInstruments: [], restrictedRowsHidden: 0 };
+    if (respectCopyright) vars = applyCopyrightFilter(vars, state.contactEmail, restrictedInfo);
+
+    if (layout === "single") {
+      XLSX.utils.book_append_sheet(wb, buildSheet(XLSX, vars), "Codebook");
+    } else {
+      const instrumentNames = [...EXCEL_STATE.selectedInstruments].sort();
+      const usedNames = new Set();
+      let counter = 1;
+      for (const inst of instrumentNames) {
+        const instVars = vars.filter(v =>
+          v._restrictedPlaceholder
+            ? v.Instrument === inst
+            : splitInstrumentName(v[state.instrumentField]).includes(inst)
+        );
+        if (instVars.length === 0) continue;
+        let sheetName = inst.replace(/[:\\\/\?\*\[\]]/g, "_").slice(0, 31);
+        if (!sheetName) sheetName = "Sheet" + counter;
+        let final = sheetName, dup = 1;
+        while (usedNames.has(final)) { final = sheetName.slice(0, 28) + "_" + (++dup); }
+        usedNames.add(final);
+        XLSX.utils.book_append_sheet(wb, buildSheet(XLSX, instVars), final);
+        counter++;
+      }
+      if (Object.keys(wb.Sheets).length === 0) throw new Error("No variables in the selected instruments");
+    }
+
+    const ts = timestampForFilename();
+    const respectMark = respectCopyright ? "_public" : "_full";
+    const outName = `PCNN_codebook${respectMark}_${ts}.xlsx`;
+    XLSX.writeFile(wb, outName);
+    closeModal("excel");
+  } catch (e) {
+    errEl.textContent = "Could not generate Excel: " + e.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Download Excel ↓";
+  }
+}
+
+// Export current Search-tab results as a one-sheet Excel using only the display columns
+async function exportSearchResults() {
+  if (!SEARCH_STATE.lastMatches || SEARCH_STATE.lastMatches.length === 0) return;
+  const fields = SEARCH_STATE.lastFieldsShown;
+  if (fields.length === 0) return;
+
+  let XLSX;
+  try { XLSX = await loadSheetJS(); }
+  catch (e) { alert(e.message); return; }
+
+  const vars = SEARCH_STATE.lastMatches.map(m => m.v);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildSheet(XLSX, vars, fields), "Search results");
+
+  const query = document.getElementById("search-query").value.trim().slice(0, 20).replace(/[^a-z0-9_-]/gi, "_") || "results";
+  const ts = timestampForFilename();
+  const outName = `PCNN_codebook_search_${query}_${ts}.xlsx`;
+  XLSX.writeFile(wb, outName);
+}
+
+// Build a styled XLSX sheet from the variable list using either the full VIEWER_FIELDS
+// allowlist (default) or a custom subset of keys (for the search-export case).
+function buildSheet(XLSX, vars, customKeys) {
+  const keys = customKeys && customKeys.length ? customKeys : VIEWER_KEYS;
+  const headerRow = keys.map(k => LABEL_OF[k] || k);
+  const dataRows = vars.map(v => keys.map(k => {
+    const val = v[k];
+    if (val === undefined || val === null) return "";
+    return String(val);
+  }));
+  const aoa = [headerRow, ...dataRows];
+  const sheet = XLSX.utils.aoa_to_sheet(aoa);
+
+  const headerFont = { bold: true, color: { rgb: "FFFFFF" }, sz: 11 };
+  const headerFill = { patternType: "solid", fgColor: { rgb: "2E7D32" } };
+  const headerAlignment = { horizontal: "left", vertical: "center", wrapText: true };
+  const headerBorder = { bottom: { style: "thin", color: { rgb: "1B5E20" } } };
+  const range = XLSX.utils.decode_range(sheet["!ref"]);
+
+  // Header row styling
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c });
+    if (sheet[addr]) sheet[addr].s = { font: headerFont, fill: headerFill, alignment: headerAlignment, border: headerBorder };
+  }
+  // Body row styling
+  for (let r = 1; r <= range.e.r; r++) {
+    const sourceVar = vars[r - 1];
+    const isRestricted = sourceVar && sourceVar._restrictedPlaceholder === true;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = sheet[addr]; if (!cell) continue;
+      if (isRestricted) {
+        cell.s = { font: { italic: true, color: { rgb: "854F0B" } }, fill: { patternType: "solid", fgColor: { rgb: "FAEEDA" } }, alignment: { vertical: "center", wrapText: true } };
+      } else if (typeof cell.v === "string" && cell.v.includes("\n")) {
+        cell.s = { alignment: { vertical: "top", wrapText: true } };
+      } else {
+        cell.s = { alignment: { vertical: "top" } };
+      }
+    }
+  }
+  // Column widths
+  const colWidths = keys.map((k, idx) => {
+    let maxLen = String(headerRow[idx]).length;
+    for (let r = 0; r < Math.min(vars.length, 200); r++) {
+      const val = dataRows[r][idx];
+      if (val) for (const ln of String(val).split("\n")) maxLen = Math.max(maxLen, ln.length);
+    }
+    return { wch: Math.min(Math.max(maxLen + 2, 12), 60) };
+  });
+  sheet["!cols"] = colWidths;
+  sheet["!rows"] = [{ hpt: 28 }];
+  sheet["!autofilter"] = { ref: sheet["!ref"] };
+  return sheet;
+}
+
+// ============ MODAL HELPERS ============
+function openModal(which)  { const el = document.getElementById("modal-" + which); if (el) el.style.display = "flex"; }
+function closeModal(which) { const el = document.getElementById("modal-" + which); if (el) el.style.display = "none"; }
+
+function toggleMoreMenu() { document.getElementById("more-menu").classList.toggle("open"); }
+function closeMoreMenu()  { document.getElementById("more-menu").classList.remove("open"); }
+
+// ============ SUGGEST-A-CHANGE FORM SUBMIT ============
+// Compose a mailto: from the form fields and trigger the user's email client.
+function submitSuggestion() {
+  const type     = document.getElementById("suggest-type").value;
+  const varName  = document.getElementById("suggest-varname").value.trim();
+  const instr    = document.getElementById("suggest-instrument").value.trim();
+  const current  = document.getElementById("suggest-current").value.trim();
+  const proposed = document.getElementById("suggest-proposed").value.trim();
+  const sender   = document.getElementById("suggest-name").value.trim();
+  const errEl    = document.getElementById("suggest-error");
+  errEl.style.display = "none";
+
+  // Light validation: need at least a current OR proposed, otherwise the email has nothing
+  if (!current && !proposed) {
+    errEl.textContent = "Please fill in either what's currently there, or what it should be (or both).";
+    errEl.style.display = "block";
+    return;
+  }
+
+  const subject = `[PCNN Codebook] ${type}${varName ? `: ${varName}` : ""}`;
+
+  const bodyLines = [
+    `Type of change: ${type}`,
+    varName  ? `Variable name: ${varName}`     : "",
+    instr    ? `Instrument: ${instr}`           : "",
+    "",
+    current  ? `What's currently there:\n${current}` : "",
+    "",
+    proposed ? `What it should be:\n${proposed}` : "",
+    "",
+    sender   ? `From: ${sender}`                 : "",
+  ].filter(Boolean);
+
+  const body = bodyLines.join("\n");
+  const mailto = `mailto:${state.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  // Open in same window — the mail client opens, page stays put.
+  window.location.href = mailto;
+
+  // Close the modal after a short delay so the click registers cleanly
+  setTimeout(() => {
+    closeModal("suggest");
+    // Clear the form so the next open starts fresh
+    document.getElementById("suggest-varname").value = "";
+    document.getElementById("suggest-instrument").value = "";
+    document.getElementById("suggest-current").value = "";
+    document.getElementById("suggest-proposed").value = "";
+    document.getElementById("suggest-name").value = "";
+  }, 300);
+}
+
+// ============ MISC HELPERS ============
+function escapeHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function escapeAttr(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+
+// Format a date from _meta.last_edited. Accepts "YYYY-MM-DD" or ISO strings;
+// falls back to the original string if we can't parse it. If empty/missing,
+// returns "—". Output: "21 May 2026" (locale-independent, short month).
+function formatLastEdited(raw) {
+  if (!raw) return "—";
+  const s = String(raw).trim();
+  // Try parsing as YYYY-MM-DD or ISO
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    if (!isNaN(d)) {
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+    }
+  }
+  // Try generic Date parsing as a last resort
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  return s;  // give up, show as-is
+}
+function timestampForFilename() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+}
+
+// ============ DEV: Load JSON for testing in current session ============
+// This loads a JSON file from disk into the *current page session only*.
+// It does NOT save anything, does NOT share with other users, and is wiped
+// when the page is refreshed. For real deployment, push an updated
+// codebook.json to the GitHub Pages repo.
+function devLoadJsonFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      let data = null;
+      let meta = {};
+      if (Array.isArray(parsed)) {
+        data = parsed;
+      } else if (parsed && Array.isArray(parsed.variables)) {
+        data = parsed.variables;
+        meta = parsed._meta || {};
+      } else if (parsed && typeof parsed === "object") {
+        // Try other common wrapper keys
+        for (const k of ["items", "records", "data", "codebook"]) {
+          if (Array.isArray(parsed[k])) { data = parsed[k]; meta = parsed._meta || {}; break; }
+        }
+      }
+      if (!data || data.length === 0) {
+        alert("Could not find a non-empty variables array in this file.");
+        return;
+      }
+      // Reset state with loaded data
+      state.variables = data;
+      state.meta = meta;
+      state.contactEmail = (meta && meta.contact_email) || state.contactEmail;
+      state.selectedInstrument = "";
+
+      // Reset search state so pickers re-init
+      SEARCH_STATE.initialized = false;
+      SEARCH_STATE.searchInFields = new Set();
+      SEARCH_STATE.displayFields = new Set();
+
+      // Re-render header info
+      document.getElementById("nodata-card").style.display = "none";
+      document.getElementById("workspace").style.display = "block";
+      document.getElementById("fallback-banner").style.display = "none";
+      document.getElementById("info-total-vars").textContent = data.length;
+      const _devPretty = formatLastEdited(meta.last_edited);
+      { const _e = document.getElementById("info-last-updated"); if (_e) _e.textContent = _devPretty; }
+      document.getElementById("about-last-edited").textContent = _devPretty;
+      const _avc = document.getElementById("about-var-count"); if (_avc) _avc.textContent = data.length;
+      document.getElementById("browse-search").value = "";
+      document.getElementById("search-query").value = "";
+
+      populateInstruments();
+      switchTab("variables");
+
+      // Reset the file input so picking the same file again re-triggers
+      event.target.value = "";
+
+      // Small confirmation
+      const note = document.createElement("div");
+      note.textContent = `✓ Loaded ${data.length} variables from ${file.name} (test session only — not saved)`;
+      note.style.cssText = "position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 18px; border-radius: 6px; font-size: 13px; z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,0.15);";
+      document.body.appendChild(note);
+      setTimeout(() => note.remove(), 3500);
+    } catch (err) {
+      alert("Could not parse JSON: " + err.message);
+    }
+  };
+  reader.onerror = () => alert("Could not read the file.");
+  reader.readAsText(file);
+}
+
+// ============ GO ============
+// ---- Password gate + encrypted-data loading --------------------------------
+const CODEBOOK_ENC_URL = "./codebook.enc";
+const ENC_ITER = 200000;
+
+function _b64ToBytes(b64) {
+  const bin = atob(b64); const a = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+  return a;
+}
+async function _decryptEnc(pw, enc) {
+  const baseKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), { name: "PBKDF2" }, false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: _b64ToBytes(enc.salt), iterations: enc.iter || ENC_ITER, hash: "SHA-256" },
+    baseKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: _b64ToBytes(enc.iv) }, key, _b64ToBytes(enc.ct));
+  return new TextDecoder().decode(plain);
+}
+function setupGate() {
+  const inp = document.getElementById("gate-pw");
+  const btn = document.getElementById("gate-btn");
+  if (inp) inp.addEventListener("keydown", e => { if (e.key === "Enter") gateUnlock(); });
+  if (btn) btn.addEventListener("click", gateUnlock);
+  if (inp) inp.focus();
+}
+async function gateUnlock() {
+  const inp = document.getElementById("gate-pw");
+  const btn = document.getElementById("gate-btn");
+  const err = document.getElementById("gate-err");
+  const pw = inp.value;
+  if (!pw) return;
+  err.style.display = "none";
+  btn.disabled = true; btn.textContent = "Unlocking\u2026";
+  try {
+    const resp = await fetch(CODEBOOK_ENC_URL, { cache: "no-cache" });
+    if (!resp.ok) throw new Error("fetch " + resp.status);
+    const enc = await resp.json();
+    let text;
+    try { text = await _decryptEnc(pw, enc); }
+    catch (e) { throw new Error("BAD_PASSWORD"); }
+    const payload = JSON.parse(text);
+    document.getElementById("gate").style.display = "none";
+    applyLoadedPayload(payload, true);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "Unlock";
+    err.textContent = (e.message === "BAD_PASSWORD")
+      ? "Incorrect password. Please try again."
+      : "Could not load the codebook. Check your connection and try again.";
+    err.style.display = "block";
+    inp.select();
+  }
+}
+
+init();
+
+</script>
+</body>
+</html>

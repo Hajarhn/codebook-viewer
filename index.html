@@ -888,6 +888,14 @@ function applyLoadedPayload(payload, loadedFromUrl) {
     return;
   }
 
+  // Hide soft-deleted rows if the source exposes the flag. NOTE: this is
+  // defense-in-depth only — the durable fix is to exclude is_deleted rows in
+  // the researcher_codebook view so the API never serves them at all.
+  data = data.filter(r => {
+    const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
+    return !(d === true || d === "true" || d === "t" || d === 1);
+  });
+
   state.variables = data;
   // FAIR fallback: when variable_name_FAIR_merged is empty, fall back to
   // variable_name_FAIR so the "Standardized name (FAIR coding)" column always
@@ -2027,11 +2035,28 @@ async function gateUnlock() {
 async function loadFromSupabase() {
   const gate = document.getElementById("gate");
   try {
-    const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
-    const resp = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } });
+    const base = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
+    const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
+    let resp = await fetch(base + "&is_deleted=eq.false", { headers });
+    if (!resp.ok) resp = await fetch(base, { headers });
     if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const rows = await resp.json();
+    let rows = await resp.json();
     if (!Array.isArray(rows)) throw new Error("unexpected response shape");
+
+    // The researcher view may not expose is_deleted, so it can still return
+    // soft-deleted rows. Pull the set of deleted ids straight from the
+    // variables table and exclude them by id.
+    try {
+      const delResp = await fetch(SUPABASE_URL + "/rest/v1/variables?select=id&is_deleted=eq.true&limit=20000", { headers });
+      if (delResp.ok) {
+        const delRows = await delResp.json();
+        if (Array.isArray(delRows) && delRows.length) {
+          const deletedIds = new Set(delRows.map(r => r.id));
+          rows = rows.filter(r => !deletedIds.has(r.id));
+        }
+      }
+    } catch (_) { /* if this fails, fall through with whatever we have */ }
+
     if (gate) gate.style.display = "none";
     applyLoadedPayload({ variables: rows }, true);
   } catch (e) {

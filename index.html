@@ -396,7 +396,7 @@
         <div class="brand-title">Codebook</div>
         <div class="brand-sub">PCNN variable dictionary</div>
       </div>
-      <span class="version-pill">v1.3 · viewer</span>
+      <span class="version-pill">v1.4 · viewer</span>
     </div>
     <div class="topbar-actions">
       <button class="btn-secondary" onclick="openExcelDialog()" title="Download visible variables as a styled Excel file">📊 Download Excel</button>
@@ -620,7 +620,7 @@
 
       <hr class="sep">
 
-      <p><strong>Viewer version:</strong> v1.3 · researcher viewer<br>
+      <p><strong>Viewer version:</strong> v1.4 · researcher viewer<br>
       <strong>Last updated:</strong> <span id="about-last-edited">—</span></p>
 
       <hr class="sep">
@@ -817,7 +817,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v1.3";
+const TOOL_VERSION = "v1.4";
 const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
 const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
 
@@ -826,6 +826,7 @@ const state = {
   variables: [],                  // raw variables loaded from codebook.json (or FALLBACK_CODEBOOK)
   meta: {},                       // _meta block (if present)
   instrumentField: "Instrument",  // fixed for the viewer
+  instrumentDesc: {},             // name -> description (published instruments)
   identifierField: "variable_name_CBS",  // fixed; only used internally for the View-dialog title
   selectedInstrument: "",
   respectCopyright: true,   // always on — copyright is non-negotiable in the viewer
@@ -887,14 +888,6 @@ function applyLoadedPayload(payload, loadedFromUrl) {
     document.getElementById("workspace").style.display = "none";
     return;
   }
-
-  // Hide soft-deleted rows if the source exposes the flag. NOTE: this is
-  // defense-in-depth only — the durable fix is to exclude is_deleted rows in
-  // the researcher_codebook view so the API never serves them at all.
-  data = data.filter(r => {
-    const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
-    return !(d === true || d === "true" || d === "t" || d === 1);
-  });
 
   state.variables = data;
   // FAIR fallback: when variable_name_FAIR_merged is empty, fall back to
@@ -1129,6 +1122,12 @@ function refreshVariablesTab() {
 
   // Pick rows that belong to the selected instrument
   let rows = getVarsForInstrument(inst);
+  // Honor the admin-defined order (display_order); rows without it sort to the end.
+  rows = rows.slice().sort((a, b) => {
+    const ao = a.display_order == null ? 1e9 : Number(a.display_order);
+    const bo = b.display_order == null ? 1e9 : Number(b.display_order);
+    return ao - bo;
+  });
 
   // Copyright filter: replace restricted instruments with placeholder rows
   const restrictedAtoms = computeRestrictedAtoms();
@@ -1251,7 +1250,12 @@ function refreshVariablesTab() {
     </div>
   `;
 
-  listEl.innerHTML = `${paginationHtml}
+  const _desc = (state.instrumentDesc && state.instrumentDesc[inst] || "").trim();
+  const descHtml = _desc
+    ? `<div style="margin-bottom:14px; padding:12px 14px; background:#f3f4f6; border:1px solid #e3e5e8; border-radius:8px; white-space:pre-wrap; font-size:13px; line-height:1.55; color:#444;">${escapeHtml(_desc)}</div>`
+    : "";
+
+  listEl.innerHTML = `${descHtml}${paginationHtml}
   <div class="vars-table-wrap">
     <!-- Top scroller mirrors the bottom one so users can scroll horizontally without going to the bottom of the page -->
     <div class="vars-table-topscroll"><div class="vars-table-topscroll-inner"></div></div>
@@ -2035,45 +2039,23 @@ async function gateUnlock() {
 async function loadFromSupabase() {
   const gate = document.getElementById("gate");
   const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
-  async function getJSON(url) {
-    const r = await fetch(url, { headers });
-    if (!r.ok) return null;
-    const j = await r.json();
-    return Array.isArray(j) ? j : null;
-  }
-  const VIEW = "variables_public";
   try {
-    // Main data (this view does not filter is_deleted by itself).
-    let rows = await getJSON(SUPABASE_URL + "/rest/v1/" + VIEW + "?select=*&limit=20000");
-    if (!rows) rows = await getJSON(SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000");
-    if (!rows) throw new Error("no data");
+    const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
+    const resp = await fetch(url, { headers });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const rows = await resp.json();
+    if (!Array.isArray(rows)) throw new Error("unexpected response shape");
 
-    // ---- DIAGNOSTICS (temporary) ----
+    // Instrument descriptions (published instruments only). Best-effort.
     try {
-      console.log("[viewer-diag] total rows:", rows.length);
-      console.log("[viewer-diag] sample row keys:", rows[0] ? Object.keys(rows[0]) : "none");
-      console.log("[viewer-diag] sample row:", rows[0]);
-      const flagged = rows.filter(r => {
-        const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
-        return d === true || d === "true" || d === "t" || d === 1;
-      });
-      console.log("[viewer-diag] rows with truthy is_deleted in payload:", flagged.length);
-    } catch (_) {}
-    // ---- END DIAGNOSTICS ----
-
-    // Separately fetch the ids that are soft-deleted (same view, so allowed),
-    // and exclude them. This works even if the row payload omits is_deleted.
-    let deletedIds = new Set();
-    let del = await getJSON(SUPABASE_URL + "/rest/v1/" + VIEW + "?select=id&is_deleted=eq.true&limit=20000");
-    if (!del) del = await getJSON(SUPABASE_URL + "/rest/v1/variables?select=id&is_deleted=eq.true&limit=20000");
-    if (Array.isArray(del)) del.forEach(r => deletedIds.add(r.id));
-    try { console.log("[viewer-diag] deleted ids fetched:", deletedIds.size, [...deletedIds].slice(0,5)); } catch(_){}
-
-    rows = rows.filter(r => {
-      if (deletedIds.has(r.id)) return false;
-      const d = r && (r.is_deleted != null ? r.is_deleted : r.isDeleted);
-      return !(d === true || d === "true" || d === "t" || d === 1);
-    });
+      const dResp = await fetch(SUPABASE_URL + "/rest/v1/instruments_public?select=name,description", { headers });
+      if (dResp.ok) {
+        const defs = await dResp.json();
+        const m = {};
+        (defs || []).forEach(r => { if (r && r.name) m[r.name] = r.description || ""; });
+        state.instrumentDesc = m;
+      }
+    } catch (_) { /* descriptions are optional */ }
 
     if (gate) gate.style.display = "none";
     applyLoadedPayload({ variables: rows }, true);

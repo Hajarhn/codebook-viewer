@@ -276,6 +276,8 @@
 
   /* ============ MODAL ============ */
   .modal-overlay { position: fixed; inset: 0; background: rgba(31, 30, 26, 0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .fx-btn { display:inline-flex; align-items:center; margin-left:6px; padding:0 5px; font-size:11px; font-style:italic; font-weight:700; color:var(--accent,#0f766e); background:#e4f1ef; border:1px solid var(--accent,#0f766e); border-radius:4px; cursor:pointer; }
+  .fx-btn:hover { background:var(--accent,#0f766e); color:#fff; }
   .modal { background: var(--surface); border-radius: 10px; width: 100%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 12px 48px rgba(0,0,0,0.18); }
   .modal-header { padding: 1.1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
   .modal-title { font-size: 16px; font-weight: 500; }
@@ -396,7 +398,7 @@
         <div class="brand-title">Codebook</div>
         <div class="brand-sub">PCNN variable dictionary</div>
       </div>
-      <span class="version-pill">v1.4 · viewer</span>
+      <span class="version-pill">v1.5 · viewer</span>
     </div>
     <div class="topbar-actions">
       <button class="btn-secondary" onclick="openExcelDialog()" title="Download visible variables as a styled Excel file">📊 Download Excel</button>
@@ -620,7 +622,7 @@
 
       <hr class="sep">
 
-      <p><strong>Viewer version:</strong> v1.4 · researcher viewer<br>
+      <p><strong>Viewer version:</strong> v1.5 · researcher viewer<br>
       <strong>Last updated:</strong> <span id="about-last-edited">—</span></p>
 
       <hr class="sep">
@@ -817,7 +819,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v1.4";
+const TOOL_VERSION = "v1.5";
 const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
 const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
 
@@ -1122,7 +1124,6 @@ function refreshVariablesTab() {
 
   // Pick rows that belong to the selected instrument
   let rows = getVarsForInstrument(inst);
-  // Honor the admin-defined order (display_order); rows without it sort to the end.
   rows = rows.slice().sort((a, b) => {
     const ao = a.display_order == null ? 1e9 : Number(a.display_order);
     const bo = b.display_order == null ? 1e9 : Number(b.display_order);
@@ -1213,7 +1214,8 @@ function refreshVariablesTab() {
       const truncated = text.length > 240 ? text.slice(0, 240) + "…" : text;
       const colClass = COLUMN_CLASS[f.key] || "";
       const emptyClass = isEmpty ? "cell-empty" : "";
-      return `<td class="${colClass} ${emptyClass}">${isEmpty ? '—' : escapeHtml(truncated)}</td>`;
+      const extra = (f.key === 'variable_name_CBS' && v.calculation) ? ` <button class="fx-btn" title="Show calculation" onclick="showViewerCalc('${escapeHtml(String(v.id))}')">ƒx</button>` : '';
+      return `<td class="${colClass} ${emptyClass}">${isEmpty ? '—' : escapeHtml(truncated)}${extra}</td>`;
     }).join("");
 
     return `<tr>
@@ -1251,10 +1253,7 @@ function refreshVariablesTab() {
   `;
 
   const _desc = (state.instrumentDesc && state.instrumentDesc[inst] || "").trim();
-  const descHtml = _desc
-    ? `<div style="margin-bottom:14px; padding:12px 14px; background:#f3f4f6; border:1px solid #e3e5e8; border-radius:8px; white-space:pre-wrap; font-size:13px; line-height:1.55; color:#444;">${escapeHtml(_desc)}</div>`
-    : "";
-
+  const descHtml = _desc ? `<div style="margin-bottom:14px; padding:12px 14px; background:#f3f4f6; border:1px solid #e3e5e8; border-radius:8px; white-space:pre-wrap; font-size:13px; line-height:1.55; color:#444;">${escapeHtml(_desc)}</div>` : "";
   listEl.innerHTML = `${descHtml}${paginationHtml}
   <div class="vars-table-wrap">
     <!-- Top scroller mirrors the bottom one so users can scroll horizontally without going to the bottom of the page -->
@@ -2038,25 +2037,21 @@ async function gateUnlock() {
 
 async function loadFromSupabase() {
   const gate = document.getElementById("gate");
-  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
   try {
     const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
-    const resp = await fetch(url, { headers });
+    const resp = await fetch(url, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } });
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const rows = await resp.json();
     if (!Array.isArray(rows)) throw new Error("unexpected response shape");
-
-    // Instrument descriptions (published instruments only). Best-effort.
     try {
-      const dResp = await fetch(SUPABASE_URL + "/rest/v1/instruments_public?select=name,description", { headers });
+      const dResp = await fetch(SUPABASE_URL + "/rest/v1/instruments_public?select=name,description", { headers: { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY } });
       if (dResp.ok) {
         const defs = await dResp.json();
         const m = {};
         (defs || []).forEach(r => { if (r && r.name) m[r.name] = r.description || ""; });
         state.instrumentDesc = m;
       }
-    } catch (_) { /* descriptions are optional */ }
-
+    } catch (_) {}
     if (gate) gate.style.display = "none";
     applyLoadedPayload({ variables: rows }, true);
   } catch (e) {
@@ -2070,6 +2065,22 @@ async function loadFromSupabase() {
 
 init();
 
+</script>
+<div class="modal-overlay" id="modal-vcalc" style="display:none;">
+  <div style="background:#fff; border-radius:12px; padding:22px; max-width:520px; width:90%;">
+    <h2 style="margin:0 0 8px; font-size:1.1rem;"><span style="font-style:italic; color:var(--accent,#0f766e);">ƒx</span> <span id="vcalc-title"></span></h2>
+    <div id="vcalc-body" style="white-space:pre-wrap; font-family:monospace; font-size:13px; background:#f3f4f6; padding:12px; border-radius:8px; line-height:1.55;"></div>
+    <div style="margin-top:14px; text-align:right;"><button onclick="document.getElementById('modal-vcalc').style.display='none'" style="padding:8px 16px; background:var(--accent,#0f766e); color:#fff; border:none; border-radius:7px; cursor:pointer;">Close</button></div>
+  </div>
+</div>
+<script>
+function showViewerCalc(id) {
+  const v = (state.variables || []).find(x => String(x.id) === String(id));
+  if (!v) return;
+  document.getElementById('vcalc-title').textContent = v.variable_name_CBS || 'Calculation';
+  document.getElementById('vcalc-body').textContent = v.calculation || '';
+  document.getElementById('modal-vcalc').style.display = 'flex';
+}
 </script>
 </body>
 </html>

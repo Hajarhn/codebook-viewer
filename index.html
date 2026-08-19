@@ -354,6 +354,45 @@
     .infobar { gap: 0.75rem; }
     .brand-title { font-size: 15px; }
   }
+
+  /* ===== Master–detail layout (v1.3) ===== */
+  .vmd { display:grid; grid-template-columns:300px 1fr; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; }
+  .vmd-list { border-right:1px solid var(--border); display:flex; flex-direction:column; min-height:440px; max-height:640px; }
+  .vmd-list-scroll { overflow-y:auto; flex:1; }
+  .vmd-item { padding:9px 12px 9px 13px; border-left:3px solid transparent; border-bottom:1px solid #eef0f2; cursor:pointer; display:flex; gap:10px; align-items:baseline; }
+  .vmd-item:hover { background:#f7f8fa; }
+  .vmd-item-sel { background:#eef2ff; border-left-color:#4f46e5; }
+  .vmd-item-num { font-size:11px; color:#9ca3af; min-width:22px; text-align:right; font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .vmd-item-sel .vmd-item-num { color:#6366f1; }
+  .vmd-item-body { flex:1; min-width:0; }
+  .vmd-item-name { display:block; font-family:ui-monospace,Menlo,monospace; font-size:13px; color:#111827; }
+  .vmd-item-sel .vmd-item-name { color:#3730a3; }
+  .vmd-item-label { font-size:12px; color:#6b7280; margin-top:2px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .vmd-detail { padding:16px 20px; }
+  .vmd-detail-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+  .vmd-detail-name { font-family:ui-monospace,Menlo,monospace; font-size:16px; font-weight:600; color:#111827; }
+  .vmd-section { margin-bottom:16px; }
+  .vmd-section-title { font-size:11px; letter-spacing:0.04em; color:#9ca3af; margin-bottom:6px; text-transform:uppercase; }
+  .vmd-table { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+  .vmd-key { color:#6b7280; padding:4px 12px 4px 0; width:40%; vertical-align:top; }
+  .vmd-val { color:#111827; padding:4px 0; word-break:break-word; line-height:1.5; white-space:pre-wrap; }
+  .vmd-val.empty { color:#c0c4cc; }
+  .vmd-empty { padding:48px 20px; text-align:center; color:#9ca3af; font-size:13px; grid-column:1/-1; }
+  .vmd-fx-mark { display:inline-block; font-family:ui-monospace,Menlo,monospace; font-size:11px; color:#0f766e; background:#d1fae5; border:1px solid #99f6e4; border-radius:5px; padding:0 5px; vertical-align:middle; }
+  .vmd-calc-tag { display:inline-block; font-size:11px; color:#0f766e; background:#d1fae5; border:1px solid #99f6e4; border-radius:10px; padding:2px 10px; margin-bottom:8px; }
+  .vmd-calc-code { font-family:ui-monospace,Menlo,monospace; font-size:12.5px; line-height:1.55; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px; white-space:pre-wrap; word-break:break-word; color:#1f2937; margin:0 0 8px; }
+  .vmd-calc-ref { font-family:ui-monospace,Menlo,monospace; color:#4338ca; background:#eef2ff; border-radius:4px; padding:0 4px; cursor:pointer; }
+  .vmd-calc-ref:hover { background:#e0e7ff; }
+  .vmd-calc-deps { font-size:12px; color:#6b7280; }
+  .vmd-calc-deps .vmd-calc-ref { margin-right:4px; }
+  .vmd-callout { margin-bottom:14px; padding:12px 14px 12px 13px; background:#eef2ff; border:1px solid #e0e7ff; border-left:3px solid #4f46e5; border-radius:8px; }
+  .vmd-detail-inner { max-width:640px; }
+  .vmd-section-title { border-bottom:0.5px solid var(--border); padding-bottom:5px; }
+  .vmd-vl-wrap { display:flex; flex-direction:column; gap:4px; }
+  .vmd-vl { display:flex; gap:8px; align-items:baseline; }
+  .vmd-vl-code { font-family:ui-monospace,Menlo,monospace; font-size:11px; background:#f1f5f9; border:0.5px solid #e2e8f0; border-radius:5px; padding:1px 7px; min-width:20px; text-align:center; color:#334155; flex-shrink:0; }
+  .vmd-vl-label { font-size:13px; line-height:1.45; }
+  .vmd-fair-chip { display:inline-block; font-family:ui-monospace,Menlo,monospace; font-size:12.5px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:4px 10px; color:#1f2937; }
 </style>
 <style>
 #gate{position:fixed;inset:0;z-index:9999;background:#fafaf7;display:flex;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
@@ -396,7 +435,7 @@
         <div class="brand-title">Codebook</div>
         <div class="brand-sub">PCNN variable dictionary</div>
       </div>
-      <span class="version-pill">v1.4 · viewer</span>
+      <span class="version-pill" id="version-pill">v2.0 · viewer</span>
     </div>
     <div class="topbar-actions">
       <button class="btn-secondary" onclick="openExcelDialog()" title="Download visible variables as a styled Excel file">📊 Download Excel</button>
@@ -607,7 +646,7 @@
     <div class="modal-header">
       <div>
         <div class="modal-title">About this codebook</div>
-        <div class="modal-sub">PCNN variable dictionary — researcher viewer v1.1</div>
+        <div class="modal-sub">PCNN variable dictionary — researcher viewer</div>
       </div>
       <button class="btn-mini" onclick="closeModal('about')">Close</button>
     </div>
@@ -620,7 +659,7 @@
 
       <hr class="sep">
 
-      <p><strong>Viewer version:</strong> v1.4 · researcher viewer<br>
+      <p><strong>Viewer version:</strong> <span id="about-version">v2.0 · researcher viewer</span><br>
       <strong>Last updated:</strong> <span id="about-last-edited">—</span></p>
 
       <hr class="sep">
@@ -648,11 +687,6 @@
         <strong>Hajar Hasannejadasl</strong><br>
         Maastricht University Medical Centre+ (MUMC+)<br>
         <a href="mailto:hajar.hasannejadasl@mumc.nl">hajar.hasannejadasl@mumc.nl</a>
-      </p>
-      <p style="margin-top: 14px;">
-        <strong>Bianca Boxma-de Klerk</strong><br>
-        Leiden University Medical Center (LUMC)<br>
-        <a href="mailto:b.m.boxma-de_klerk@lumc.nl">b.m.boxma-de_klerk@lumc.nl</a>
       </p>
 
       <hr class="sep">
@@ -725,7 +759,7 @@
 </div> <!-- /app -->
 
 <footer class="site-footer">
-  Codebook Viewer v1.1 · Post-COVID Network Netherlands (PCNN), funded by ZonMw ·
+  Codebook Viewer <span id="footer-version">v2.0</span> · Post-COVID Network Netherlands (PCNN), funded by ZonMw ·
   <a href="javascript:void(0)" onclick="openModal('about')">About</a> ·
   <a href="javascript:void(0)" onclick="openModal('contact')">Contact</a> ·
   <a href="javascript:void(0)" onclick="openModal('suggest')">Suggest a change</a>
@@ -817,7 +851,13 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v1.4";
+const TOOL_VERSION = "v2.4";
+function applyVersionLabels() {
+  const p = document.getElementById('version-pill'); if (p) p.textContent = TOOL_VERSION + ' · viewer';
+  const a = document.getElementById('about-version'); if (a) a.textContent = TOOL_VERSION + ' · researcher viewer';
+  const fo = document.getElementById('footer-version'); if (fo) fo.textContent = TOOL_VERSION;
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabels); else applyVersionLabels();
 const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
 const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
 
@@ -844,6 +884,7 @@ async function init() {
   document.getElementById("instrument-select").addEventListener("change", function() {
     state.selectedInstrument = this.value;
     BROWSE_STATE.currentPage = 0;
+    BROWSE_STATE.selectedIdx = 0;
     refreshVariablesTab();
   });
   document.getElementById("search-query").addEventListener("input", debouncedSearch);
@@ -851,6 +892,7 @@ async function init() {
   document.getElementById("search-case-sensitive").addEventListener("change", debouncedSearch);
   document.getElementById("browse-search").addEventListener("input", () => {
     BROWSE_STATE.currentPage = 0;
+    BROWSE_STATE.selectedIdx = 0;
     refreshVariablesTab();
   });
   document.querySelectorAll(".modal-overlay").forEach(ov => {
@@ -1100,7 +1142,7 @@ const COLUMN_CLASS = {
 
 // Pagination settings
 const PAGE_SIZE_OPTIONS = [10, 20, 30];
-const BROWSE_STATE = { currentPage: 0, pageSize: 30 };
+const BROWSE_STATE = { currentPage: 0, pageSize: 30, selectedIdx: 0 };
 
 function refreshVariablesTab() {
   const inst = state.selectedInstrument;
@@ -1159,117 +1201,169 @@ function refreshVariablesTab() {
   document.getElementById("tab-count-vars").textContent = filtered.length;
   state._currentlyDisplayedRows = filtered;
 
+  const _desc = (state.instrumentDesc && state.instrumentDesc[inst] || "").trim();
+  const calloutHtml = _desc
+    ? `<div class="vmd-callout"><div style="display:flex; gap:10px; align-items:flex-start;">
+        <span style="font-size:15px; line-height:1.4;">📋</span>
+        <div><div style="font-size:11px; font-weight:600; color:#4338ca; letter-spacing:0.03em; margin-bottom:3px;">INSTRUCTION</div>
+        <div style="white-space:pre-wrap; font-size:13px; line-height:1.55; color:#3730a3;">${escapeHtml(_desc)}</div></div></div></div>`
+    : "";
+
   if (filtered.length === 0) {
-    if (search) {
-      listEl.innerHTML = `<div class="empty-state">No variables in <strong>${escapeHtml(inst)}</strong> match “${escapeHtml(search)}”.</div>`;
-    } else {
-      listEl.innerHTML = `<div class="empty-state">No variables in <strong>${escapeHtml(inst)}</strong>.</div>`;
-    }
+    const msg = search
+      ? `No variables in <strong>${escapeHtml(inst)}</strong> match “${escapeHtml(search)}”.`
+      : `No variables in <strong>${escapeHtml(inst)}</strong>.`;
+    listEl.innerHTML = calloutHtml + `<div class="empty-state">${msg}</div>`;
     return;
   }
 
-  // Pagination: clamp current page to valid range
-  const totalPages = Math.max(1, Math.ceil(filtered.length / BROWSE_STATE.pageSize));
-  if (BROWSE_STATE.currentPage >= totalPages) BROWSE_STATE.currentPage = totalPages - 1;
-  if (BROWSE_STATE.currentPage < 0) BROWSE_STATE.currentPage = 0;
-  const startIdx = BROWSE_STATE.currentPage * BROWSE_STATE.pageSize;
-  const endIdx = Math.min(startIdx + BROWSE_STATE.pageSize, filtered.length);
-  const pageRows = filtered.slice(startIdx, endIdx);
+  if (BROWSE_STATE.selectedIdx == null || BROWSE_STATE.selectedIdx < 0 || BROWSE_STATE.selectedIdx >= filtered.length) {
+    BROWSE_STATE.selectedIdx = 0;
+  }
 
-  // Total columns: # · Actions · all VIEWER_FIELDS
-  const totalCols = 2 + VIEWER_FIELDS.length;
+  listEl.innerHTML = calloutHtml + `
+    <div class="vmd">
+      <div class="vmd-list"><div class="vmd-list-scroll">${vmdBuildList(filtered)}</div></div>
+      <div class="vmd-detail-wrap">${vmdRenderDetail(filtered[BROWSE_STATE.selectedIdx])}</div>
+    </div>`;
+}
 
-  const headerHtml = `<tr>
-    <th class="col-idx">#</th>
-    ${VIEWER_FIELDS.map(f => `<th class="${COLUMN_CLASS[f.key] || ''}">${escapeHtml(f.label)}</th>`).join("")}
-  </tr>`;
-
-  // Render rows. The displayed "#" is the absolute index in `filtered` so
-  // numbering stays consistent across pages. The View button passes the
-  // absolute index into state._currentlyDisplayedRows.
-  const bodyRows = pageRows.map((v, pageOffset) => {
-    const absoluteIdx = startIdx + pageOffset;
+// ===== Master–detail helpers (v1.3) =====
+function vmdCalc(v) {
+  const c = v && ((v.custom_fields && v.custom_fields.calculation) || v.calculation);
+  return c ? String(c) : "";
+}
+function vmdFxMark(v) { return vmdCalc(v) ? ' <span class="vmd-fx-mark" title="Derived / calculated variable">ƒx</span>' : ''; }
+function vmdRefs(formula) {
+  const set = new Set();
+  (String(formula).match(/\{([^}]+)\}/g) || []).forEach(t => set.add(t.replace(/[{}]/g, '').trim()));
+  return [...set].filter(Boolean);
+}
+function vmdHighlight(formula) {
+  return escapeHtml(String(formula)).replace(/\{([^}]+)\}/g, function(_, ref) {
+    const r = ref.trim();
+    return `<span class="vmd-calc-ref" onclick="vmdSelectByName('${escapeAttr(r)}')">${escapeHtml(r)}</span>`;
+  });
+}
+function vmdSelectByName(name) {
+  const rows = state._currentlyDisplayedRows || [];
+  for (let i = 0; i < rows.length; i++) {
+    if (!rows[i]._placeholder && (rows[i].variable_name_CBS || '') === name) { vmdSelect(i); return; }
+  }
+}
+function vmdCalcSection(v) {
+  const calc = vmdCalc(v);
+  if (!calc) return '';
+  const deps = vmdRefs(calc);
+  const depsHtml = deps.length
+    ? `<div class="vmd-calc-deps">Depends on: ${deps.map(d => `<span class="vmd-calc-ref" onclick="vmdSelectByName('${escapeAttr(d)}')">${escapeHtml(d)}</span>`).join('')}</div>`
+    : '';
+  return `<div class="vmd-section">
+    <div class="vmd-section-title">Calculation</div>
+    <div class="vmd-calc-tag">ƒx Derived variable</div>
+    <pre class="vmd-calc-code">${vmdHighlight(calc)}</pre>
+    ${depsHtml}
+  </div>`;
+}
+function vmdBuildList(rows) {
+  return rows.map((v, i) => {
+    const sel = (BROWSE_STATE.selectedIdx === i) ? ' vmd-item-sel' : '';
     if (v._placeholder) {
-      const contactEmail = state.contactEmail;
-      const mailtoSubject = encodeURIComponent(`[PCNN Codebook] Access request: ${v.Instrument}`);
-      return `<tr class="restricted-row">
-        <td class="col-idx">${absoluteIdx + 1}</td>
-        <td colspan="${totalCols - 1}">
-          <div class="restricted-content">
-            <span class="restricted-icon">🔒</span>
-            <span class="restricted-name">${escapeHtml(v.Instrument)}</span>
-            <span class="restricted-msg">
-              This questionnaire is copyrighted. Contact for the full item list.
-            </span>
-          </div>
-        </td>
-      </tr>`;
+      return `<div class="vmd-item${sel}" onclick="vmdSelect(${i})">
+        <span class="vmd-item-num">${i + 1}</span>
+        <div class="vmd-item-body"><span class="vmd-item-name">🔒 ${escapeHtml(v.Instrument)}</span>
+        <span class="vmd-item-label">Copyrighted — contact for items</span></div></div>`;
     }
-
-    const cells = VIEWER_FIELDS.map(f => {
-      const val = v[f.key];
-      const isEmpty = val === undefined || val === null || val === "";
-      const text = isEmpty ? "" : String(val);
-      const truncated = text.length > 240 ? text.slice(0, 240) + "…" : text;
-      const colClass = COLUMN_CLASS[f.key] || "";
-      const emptyClass = isEmpty ? "cell-empty" : "";
-      return `<td class="${colClass} ${emptyClass}">${isEmpty ? '—' : escapeHtml(truncated)}</td>`;
-    }).join("");
-
-    return `<tr>
-      <td class="col-idx">${absoluteIdx + 1}</td>
-      ${cells}
-    </tr>`;
-  }).join("");
-
-  // Pagination controls (always show the per-page selector; nav buttons only if > 1 page)
-  const navButtons = totalPages > 1 ? `
-      <button class="btn-mini" onclick="goToPage(0)" ${BROWSE_STATE.currentPage === 0 ? "disabled" : ""}>« First</button>
-      <button class="btn-mini" onclick="goToPage(${BROWSE_STATE.currentPage - 1})" ${BROWSE_STATE.currentPage === 0 ? "disabled" : ""}>‹ Previous</button>
-      <button class="btn-mini" onclick="goToPage(${BROWSE_STATE.currentPage + 1})" ${BROWSE_STATE.currentPage >= totalPages - 1 ? "disabled" : ""}>Next ›</button>
-      <button class="btn-mini" onclick="goToPage(${totalPages - 1})" ${BROWSE_STATE.currentPage >= totalPages - 1 ? "disabled" : ""}>Last »</button>
-  ` : "";
-
-  const pageSizeSelector = `
-    <label class="page-size-picker">
-      <span style="color: var(--text-muted); font-size: 12px;">Per page:</span>
-      <select onchange="setPageSize(this.value)">
-        ${PAGE_SIZE_OPTIONS.map(n =>
-          `<option value="${n}" ${n === BROWSE_STATE.pageSize ? "selected" : ""}>${n}</option>`
-        ).join("")}
-      </select>
-    </label>`;
-
-  const paginationHtml = `
-    <div class="pagination">
-      ${pageSizeSelector}
-      <span class="pagination-info">
-        Showing <strong>${startIdx + 1}</strong>–<strong>${endIdx}</strong> of <strong>${filtered.length}</strong>${totalPages > 1 ? ` · Page <strong>${BROWSE_STATE.currentPage + 1}</strong> of <strong>${totalPages}</strong>` : ""}
-      </span>
-      ${navButtons}
-    </div>
-  `;
-
-  const _desc = (state.instrumentDesc && state.instrumentDesc[inst] || "").trim();
-  const descHtml = _desc
-    ? `<div style="margin-bottom:14px; padding:12px 14px; background:#f3f4f6; border:1px solid #e3e5e8; border-radius:8px; white-space:pre-wrap; font-size:13px; line-height:1.55; color:#444;">${escapeHtml(_desc)}</div>`
-    : "";
-
-  listEl.innerHTML = `${descHtml}${paginationHtml}
-  <div class="vars-table-wrap">
-    <!-- Top scroller mirrors the bottom one so users can scroll horizontally without going to the bottom of the page -->
-    <div class="vars-table-topscroll"><div class="vars-table-topscroll-inner"></div></div>
-    <div class="vars-table-scroll">
-      <table class="vars-table">
-        <thead>${headerHtml}</thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-    </div>
-  </div>
-  ${paginationHtml}`;
-
-  // After render: size the top-scroll inner div to the table's width, and sync scrollLeft between top and bottom.
-  syncTopScroller();
+    const name = v.variable_name_CBS || '';
+    const label = v.variable_label_NL || v.variable_label_EN || '';
+    const isCalc = !!vmdCalc(v);
+    const labelHtml = (isCalc && (!label || label.indexOf('{') !== -1))
+      ? '<span class="vmd-val empty" style="font-style:italic;">Derived variable</span>'
+      : (label ? escapeHtml(label) : '<span class="vmd-val empty">(no label)</span>');
+    return `<div class="vmd-item${sel}" onclick="vmdSelect(${i})">
+      <span class="vmd-item-num">${i + 1}</span>
+      <div class="vmd-item-body"><span class="vmd-item-name">${escapeHtml(name)}${vmdFxMark(v)}</span>
+      <span class="vmd-item-label">${labelHtml}</span></div></div>`;
+  }).join('');
+}
+function vmdParseValues(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  const re = /\[([^\]]*)\]\s*([^\[]*)/g; const out = []; let m;
+  while ((m = re.exec(s))) { const code = m[1].trim(); const label = (m[2] || '').trim(); if (code !== '') out.push({ code: code, label: label }); }
+  return out.length ? out : null;
+}
+function vmdValueCell(raw) {
+  const parsed = vmdParseValues(raw);
+  const labeled = parsed ? parsed.filter(o => o.label !== '') : null;
+  if (!labeled || labeled.length === 0) {
+    const isEmpty = (raw === undefined || raw === null || raw === '');
+    return `<td class="vmd-val ${isEmpty ? 'empty' : ''}">${isEmpty ? '—' : escapeHtml(String(raw))}</td>`;
+  }
+  const rows = labeled.map(o => `<div class="vmd-vl"><span class="vmd-vl-code">${escapeHtml(o.code)}</span><span class="vmd-vl-label">${escapeHtml(o.label)}</span></div>`).join('');
+  return `<td class="vmd-val"><div class="vmd-vl-wrap">${rows}</div></td>`;
+}
+function vmdFairCell(raw) {
+  const isEmpty = (raw === undefined || raw === null || raw === '');
+  if (isEmpty) return `<td class="vmd-val empty">—</td>`;
+  return `<td class="vmd-val"><span class="vmd-fair-chip">${escapeHtml(String(raw))}</span></td>`;
+}
+function vmdRenderDetail(v) {
+  if (!v) return '<div class="vmd-empty">Select a variable from the list.</div>';
+  if (v._placeholder) {
+    return `<div class="vmd-detail"><div class="restricted-content" style="flex-direction:column; gap:8px; text-align:center; padding:24px;">
+      <span class="restricted-icon" style="font-size:22px;">🔒</span>
+      <span class="restricted-name">${escapeHtml(v.Instrument)}</span>
+      <span class="restricted-msg">This questionnaire is copyrighted. Contact for the full item list.</span></div></div>`;
+  }
+  const fieldByKey = k => VIEWER_FIELDS.find(f => f.key === k);
+  const cell = k => {
+    const f = fieldByKey(k); if (!f) return '';
+    const val = v[k];
+    let valCell;
+    if (k === 'value_labels_NL' || k === 'value_labels_EN') valCell = vmdValueCell(val);
+    else if (k === 'variable_name_FAIR_merged') valCell = vmdFairCell(val);
+    else { const isEmpty = (val === undefined || val === null || val === ''); valCell = `<td class="vmd-val ${isEmpty ? 'empty' : ''}">${isEmpty ? '—' : escapeHtml(String(val))}</td>`; }
+    return `<tr><td class="vmd-key">${escapeHtml(f.label)}</td>${valCell}</tr>`;
+  };
+  const groups = [
+    ['Classification', ['Theme', 'Subdomain']],
+    ['Labels', ['variable_label_NL', 'variable_label_EN']],
+    ['Values', ['value_labels_NL', 'value_labels_EN', 'variable_name_FAIR_merged']]
+  ];
+  const sections = groups.map(([title, keys]) => {
+    const present = keys.filter(k => fieldByKey(k));
+    // Hide a group entirely when ALL of its fields are empty; within a
+    // partly-filled group, empty fields still show as "—".
+    const groupHasValue = present.some(k => {
+      const val = v[k];
+      return !(val === undefined || val === null || String(val).trim() === '');
+    });
+    if (!groupHasValue) return '';
+    return `<div class="vmd-section"><div class="vmd-section-title">${title}</div><table class="vmd-table">${present.map(cell).join('')}</table></div>`;
+  }).join('');
+  return `<div class="vmd-detail"><div class="vmd-detail-inner">
+    <div class="vmd-detail-head"><span class="vmd-detail-name">${escapeHtml(v.variable_name_CBS || '')}${vmdFxMark(v)}</span>
+      <button class="btn-mini" onclick="vmdOpenSuggest()">✎ Suggest a change</button></div>
+    ${vmdCalcSection(v)}
+    ${sections}
+  </div></div>`;
+}
+function vmdOpenSuggest() {
+  const v = (state._currentlyDisplayedRows || [])[BROWSE_STATE.selectedIdx];
+  if (!v || v._placeholder) return;
+  openModal('suggest');
+  const vn = document.getElementById('suggest-varname'); if (vn) vn.value = v.variable_name_CBS || '';
+  const inst = document.getElementById('suggest-instrument'); if (inst) inst.value = v.Instrument || '';
+}
+function vmdSelect(i) {
+  BROWSE_STATE.selectedIdx = i;
+  const scroll = document.querySelector('#browse-list .vmd-list-scroll');
+  if (scroll) scroll.innerHTML = vmdBuildList(state._currentlyDisplayedRows || []);
+  const wrap = document.querySelector('#browse-list .vmd-detail-wrap');
+  if (wrap) wrap.innerHTML = vmdRenderDetail((state._currentlyDisplayedRows || [])[i]);
+  const items = document.querySelectorAll('#browse-list .vmd-item');
+  if (items[i] && items[i].scrollIntoView) items[i].scrollIntoView({ block: 'nearest' });
 }
 
 // Wire up the "fake" top scrollbar to mirror the real bottom one.
@@ -1881,19 +1975,37 @@ function submitSuggestion() {
   const body = bodyLines.join("\n");
   const mailto = `mailto:${state.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-  // Open in same window — the mail client opens, page stays put.
+  // Open the user's mail client — note this only DRAFTS the email; nothing is
+  // sent until they press Send there. Some machines have no mail client at
+  // all, so show an explicit confirmation with a copy fallback instead of
+  // silently closing the modal (which looked like "sent" when nothing was).
   window.location.href = mailto;
 
-  // Close the modal after a short delay so the click registers cleanly
-  setTimeout(() => {
-    closeModal("suggest");
-    // Clear the form so the next open starts fresh
-    document.getElementById("suggest-varname").value = "";
-    document.getElementById("suggest-instrument").value = "";
-    document.getElementById("suggest-current").value = "";
-    document.getElementById("suggest-proposed").value = "";
-    document.getElementById("suggest-name").value = "";
-  }, 300);
+  const err = document.getElementById("suggest-error");
+  err.style.display = "block";
+  err.style.background = "#eef9f1";
+  err.style.color = "#166534";
+  err.innerHTML = 'Your email app should now open with the suggestion drafted to <strong>'
+    + escapeHtml(state.contactEmail) + '</strong>. <strong>It is not sent until you press Send there.</strong><br>'
+    + 'No email app? <button type="button" class="btn-mini" style="margin-top:6px;" onclick="copySuggestionText()">📋 Copy suggestion to clipboard</button> and paste it into an email to '
+    + escapeHtml(state.contactEmail) + '.';
+  window._lastSuggestText = 'To: ' + state.contactEmail + '\nSubject: ' + subject + '\n\n' + body;
+}
+function copySuggestionText() {
+  const t = window._lastSuggestText || '';
+  const done = () => {
+    const err = document.getElementById("suggest-error");
+    if (err) err.innerHTML = '✓ Copied. Paste it into an email to <strong>' + escapeHtml(state.contactEmail) + '</strong>.';
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
+  } else fallbackCopy(t, done);
+  function fallbackCopy(text, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (_) {}
+    document.body.removeChild(ta); cb();
+  }
 }
 
 // ============ MISC HELPERS ============

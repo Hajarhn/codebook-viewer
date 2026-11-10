@@ -22,8 +22,7 @@ The viewer shows the **published** part of the PCNN central codebook: every vari
 **Key features**
 
 - **Browse by questionnaire (instrument).** Related questionnaires are grouped in the dropdown (for example all PROMIS-\*). A variable that belongs to two questionnaires (for example `DSQ-PEM + DSQ-2`) is shown under both, in each questionnaire's own order.
-- **Instructions.** A questionnaire's instruction text is shown above its variables.
-- **Item numbers.** Each variable shows its item number in the original questionnaire (for example `Q13-1`).
+- **Instructions.** When a questionnaire has an instruction text, it is shown above its variables.
 - **Answer options** are shown as a clear list of codes and labels, in Dutch and English.
 - **Links to terminologies.** FAIR codes link directly to the concept: `sct_…` opens the SNOMED CT browser, `lnc_…` LOINC (loinc.org) and `ncit_…` the NCI Thesaurus (EVS Explore). Project-specific `pcnn_` codes have no external link.
 - **Derived variables** (ƒx) show their formula and the variables it uses.
@@ -49,7 +48,6 @@ No account or installation is needed. A step-by-step guide with screenshots is a
 | Theme | Thematic grouping |
 | Subdomain | Finer subcategory |
 | Instrument | The questionnaire(s) this variable belongs to |
-| Item number | Number of the item in the original questionnaire |
 | Variable name CBS | Standardised unique identifier |
 | Variable label (NL) | Dutch wording of the question |
 | Variable label (EN) | English wording of the question |

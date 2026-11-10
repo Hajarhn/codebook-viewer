@@ -392,6 +392,10 @@
   .vmd-vl { display:flex; gap:8px; align-items:baseline; }
   .vmd-vl-code { font-family:ui-monospace,Menlo,monospace; font-size:11px; background:#f1f5f9; border:0.5px solid #e2e8f0; border-radius:5px; padding:1px 7px; min-width:20px; text-align:center; color:#334155; flex-shrink:0; }
   .vmd-vl-label { font-size:13px; line-height:1.45; }
+  .vmd-item-q { display:inline-block; font-family:ui-monospace,Menlo,monospace; font-size:10.5px; color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; padding:0 5px; margin-left:6px; vertical-align:1px; }
+  .fair-link { color:inherit; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:2px; }
+  .fair-link:hover { color:#0f766e; text-decoration-style:solid; }
+  .fair-link::after { content:" ↗"; font-size:0.8em; opacity:.55; }
   .vmd-fair-chip { display:inline-block; font-family:ui-monospace,Menlo,monospace; font-size:12.5px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:4px 10px; color:#1f2937; }
 </style>
 <style>
@@ -421,7 +425,7 @@
     <input id="gate-pw" type="password" autocomplete="off" placeholder="Enter password">
     <button id="gate-btn">Unlock</button>
     <div class="err" id="gate-err"></div>
-    <div class="foot">The codebook is encrypted with AES-256 and decrypted in your browser. Nothing is uploaded.</div>
+    <div class="foot">The password keeps the page for the PCNN network. The codebook holds descriptions of variables only, never participant data.</div>
   </div>
 </div>
 
@@ -655,7 +659,7 @@
 
       <p style="margin-top: 12px;">This viewer is a <strong>read-only</strong>, self-contained copy of the codebook intended for principal investigators and study staff. Editing is done by the codebook owner in a separate editor; updated viewers are re-published as the codebook evolves.</p>
 
-      <p style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">The codebook data lives in <code>codebook.json</code> next to this HTML on GitHub Pages. When the codebook is updated, only <code>codebook.json</code> changes — this HTML stays the same. Refresh the page to see the latest version.</p>
+      <p style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">The codebook is read live from the PCNN codebook database, so it is always the latest published version. Refresh the page to see changes.</p>
 
       <hr class="sep">
 
@@ -843,6 +847,7 @@ const VIEWER_FIELDS = [
   { label: "Theme",                                key: "Theme" },
   { label: "Subdomain",                            key: "Subdomain" },
   { label: "Instrument",                           key: "Instrument" },
+  { label: "Item number",                          key: "item_number" },
   { label: "Variable name CBS",                    key: "variable_name_CBS" },
   { label: "Variable label (NL)",                  key: "variable_label_NL" },
   { label: "Variable label (EN)",                  key: "variable_label_EN" },
@@ -851,7 +856,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v2.4";
+const TOOL_VERSION = "v2.5";
 function applyVersionLabels() {
   const p = document.getElementById('version-pill'); if (p) p.textContent = TOOL_VERSION + ' · viewer';
   const a = document.getElementById('about-version'); if (a) a.textContent = TOOL_VERSION + ' · researcher viewer';
@@ -1132,6 +1137,7 @@ const COLUMN_CLASS = {
   Theme:                     "col-theme",
   Subdomain:                 "col-subdomain",
   Instrument:                "col-instrument",
+  item_number:               "col-item",
   variable_name_CBS:         "col-varname",
   variable_label_NL:         "col-label-nl",
   variable_label_EN:         "col-label-en",
@@ -1282,7 +1288,7 @@ function vmdBuildList(rows) {
       : (label ? escapeHtml(label) : '<span class="vmd-val empty">(no label)</span>');
     return `<div class="vmd-item${sel}" onclick="vmdSelect(${i})">
       <span class="vmd-item-num">${i + 1}</span>
-      <div class="vmd-item-body"><span class="vmd-item-name">${escapeHtml(name)}${vmdFxMark(v)}</span>
+      <div class="vmd-item-body"><span class="vmd-item-name">${escapeHtml(name)}${vmdFxMark(v)}${v.item_number ? ' <span class="vmd-item-q" title="Item number in the original questionnaire">' + escapeHtml(v.item_number) + '</span>' : ''}</span>
       <span class="vmd-item-label">${labelHtml}</span></div></div>`;
   }).join('');
 }
@@ -1303,10 +1309,24 @@ function vmdValueCell(raw) {
   const rows = labeled.map(o => `<div class="vmd-vl"><span class="vmd-vl-code">${escapeHtml(o.code)}</span><span class="vmd-vl-label">${escapeHtml(o.label)}</span></div>`).join('');
   return `<td class="vmd-val"><div class="vmd-vl-wrap">${rows}</div></td>`;
 }
+// v2.5: FAIR codes link to their page (SNOMED CT, LOINC, NCIt), as in the Editor.
+// pcnn_ codes are our own and get no link.
+function fairCodeUrl(prefix, rest) {
+  if (prefix === 'sct') { const m = rest.match(/^(\d{6,18})/); return m ? { url: 'https://browser.ihtsdotools.org/?perspective=full&conceptId1=' + m[1] + '&edition=MAIN&languages=en', code: m[1], sys: 'SNOMED CT' } : null; }
+  if (prefix === 'lnc') { const m = rest.match(/^((?:LA|LP|LL)?\d{1,7})[-_](\d+)/i); return m ? { url: 'https://loinc.org/' + m[1].toUpperCase() + '-' + m[2] + '/', code: m[1].toUpperCase() + '-' + m[2], sys: 'LOINC' } : null; }
+  if (prefix === 'ncit') { const m = rest.match(/^(C\d+)/i); return m ? { url: 'https://evsexplore.semantic.cancer.gov/evsexplore/concept/ncit/' + m[1].toUpperCase(), code: m[1].toUpperCase(), sys: 'NCIt' } : null; }
+  return null;
+}
+function fairLinkHtml(text) {
+  return escapeHtml(String(text)).replace(/\b(sct|lnc|ncit)_([A-Za-z0-9][A-Za-z0-9_\-]*)/g, (all, p, rest) => {
+    const info = fairCodeUrl(p.toLowerCase(), rest);
+    return info ? `<a class="fair-link" href="${escapeAttr(info.url)}" target="_blank" rel="noopener noreferrer" title="Open ${escapeAttr(info.code)} in ${info.sys}">${all}</a>` : all;
+  });
+}
 function vmdFairCell(raw) {
   const isEmpty = (raw === undefined || raw === null || raw === '');
   if (isEmpty) return `<td class="vmd-val empty">—</td>`;
-  return `<td class="vmd-val"><span class="vmd-fair-chip">${escapeHtml(String(raw))}</span></td>`;
+  return `<td class="vmd-val"><span class="vmd-fair-chip">${fairLinkHtml(raw)}</span></td>`;
 }
 function vmdRenderDetail(v) {
   if (!v) return '<div class="vmd-empty">Select a variable from the list.</div>';
@@ -1327,7 +1347,7 @@ function vmdRenderDetail(v) {
     return `<tr><td class="vmd-key">${escapeHtml(f.label)}</td>${valCell}</tr>`;
   };
   const groups = [
-    ['Classification', ['Theme', 'Subdomain']],
+    ['Classification', ['Theme', 'Subdomain', 'item_number']],
     ['Labels', ['variable_label_NL', 'variable_label_EN']],
     ['Values', ['value_labels_NL', 'value_labels_EN', 'variable_name_FAIR_merged']]
   ];

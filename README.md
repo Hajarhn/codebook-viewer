@@ -3,13 +3,13 @@
 A browser-based, read-only viewer for the codebook (data dictionary) of the Post-COVID Network Netherlands (PCNN).
 
 **Project:** Post-COVID Network Netherlands (PCNN), funded by ZonMw
-**Status:** Read-only viewer for the PCNN community — access controlled (distribution under discussion)
+**Status:** Read-only viewer for the PCNN community access controlled (distribution under discussion)
 **Current version:** v2.5 (November 2026)
 **License:** Proprietary. All rights reserved. See [LICENSE](LICENSE).
 
 ## Project context
 
-This viewer was developed within the Post-COVID Network Netherlands (PCNN) — a national collaborative partnership in which patients, scientists, healthcare professionals and societal partners work together to coordinate scientific research and patient care for people with post-COVID. Through this coordination, knowledge is systematically built up to better understand post-COVID, improve diagnostics and develop better treatment options.
+This viewer was developed within the Post-COVID Network Netherlands (PCNN) a national collaborative partnership in which patients, scientists, healthcare professionals and societal partners work together to coordinate scientific research and patient care for people with post-COVID. Through this coordination, knowledge is systematically built up to better understand post-COVID, improve diagnostics and develop better treatment options.
 
 The PCNN network actively promotes the utilisation of relevant knowledge to continuously improve care for all adults and children with post-COVID in the Netherlands. PCNN is funded by ZonMw.
 

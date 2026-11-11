@@ -17,7 +17,7 @@ The viewer makes the PCNN central codebook accessible to project collaborators a
 
 ## What it does
 
-The viewer shows the **published** part of the PCNN central codebook: every variable with its question in Dutch and English, its answer options and its FAIR code. Researchers can browse, search, view and download — but not edit. The codebook itself is maintained by the codebook team in the PCNN Codebook Editor.
+The viewer shows the **published** part of the PCNN central codebook: every variable with its question in Dutch and English, its answer options and its FAIR code. Researchers can browse, search, view and download but not edit. The codebook itself is maintained by the codebook team in the PCNN Codebook Editor.
 
 **Key features**
 

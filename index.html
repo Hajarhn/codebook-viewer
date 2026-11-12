@@ -389,6 +389,12 @@
   .vmd-detail-inner { max-width:640px; }
   .vmd-section-title { border-bottom:0.5px solid var(--border); padding-bottom:5px; }
   .vmd-vl-wrap { display:flex; flex-direction:column; gap:4px; }
+  .vmd-ans { width:100%; border-collapse:collapse; font-size:13px; margin-top:2px; }
+  .vmd-ans th { text-align:left; font-weight:500; color:#6b7280; font-size:11.5px; padding:4px 8px 4px 0; border-bottom:1px solid #e5e7eb; }
+  .vmd-ans td { padding:5px 8px 5px 0; vertical-align:top; border-bottom:1px solid #f3f4f6; line-height:1.45; word-break:break-word; }
+  .vmd-ans td:first-child { width:56px; }
+  .vmd-ans td.empty { color:#9ca3af; }
+  .vmd-ans-fair { font-family:ui-monospace,Menlo,monospace; font-size:12px; }
   .vmd-vl { display:flex; gap:8px; align-items:baseline; }
   .vmd-vl-code { font-family:ui-monospace,Menlo,monospace; font-size:11px; background:#f1f5f9; border:0.5px solid #e2e8f0; border-radius:5px; padding:1px 7px; min-width:20px; text-align:center; color:#334155; flex-shrink:0; }
   .vmd-vl-label { font-size:13px; line-height:1.45; }
@@ -855,7 +861,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v2.5";
+const TOOL_VERSION = "v2.6";
 function applyVersionLabels() {
   const p = document.getElementById('version-pill'); if (p) p.textContent = TOOL_VERSION + ' · viewer';
   const a = document.getElementById('about-version'); if (a) a.textContent = TOOL_VERSION + ' · researcher viewer';
@@ -864,6 +870,35 @@ function applyVersionLabels() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabels); else applyVersionLabels();
 const VIEWER_KEYS = VIEWER_FIELDS.map(f => f.key);
 const LABEL_OF = Object.fromEntries(VIEWER_FIELDS.map(f => [f.key, f.label]));
+
+// v2.6: the admin chooses the fields in the Editor (Manage fields → Public Viewer).
+// DB field name → key in the rows of researcher_codebook, label; in display order.
+const VIEWER_FIELD_CATALOG = [
+  ['Theme',                 'Theme',                     'Theme'],
+  ['Subdomain',             'Subdomain',                 'Subdomain'],
+  [null,                    'Instrument',                'Instrument'],
+  [null,                    'variable_name_CBS',         'Variable name CBS'],
+  ['variable_label_nl',     'variable_label_NL',         'Variable label (NL)'],
+  ['variable_label_en',     'variable_label_EN',         'Variable label (EN)'],
+  ['values',                'values',                    'Answer codes'],
+  ['value_labels_nl',       'value_labels_NL',           'Value label (NL)'],
+  ['value_labels_en',       'value_labels_EN',           'Value label (EN)'],
+  ['value_labels_fair',     'value_labels_FAIR',         'FAIR codes of the answers'],
+  ['value_coding',          'value_coding',              'Names of the answer FAIR codes'],
+  ['variable_name_fair',    'variable_name_FAIR_merged', 'Standardized name (FAIR coding)'],
+  ['variable_coding_label', 'variable_coding_label',     'Name of the FAIR code'],
+  ['measurement_unit',      'measurement_unit',          'Measurement unit'],
+  ['item_number',           'item_number',               'Item number'],
+];
+function applyViewerFieldChoice(dbNames) {
+  const on = new Set(dbNames || []);
+  const list = VIEWER_FIELD_CATALOG.filter(([db]) => db === null || on.has(db)).map(([, key, label]) => ({ key, label }));
+  VIEWER_FIELDS.splice(0, VIEWER_FIELDS.length, ...list);
+  VIEWER_KEYS.splice(0, VIEWER_KEYS.length, ...list.map(f => f.key));
+  Object.keys(LABEL_OF).forEach(k => delete LABEL_OF[k]);
+  list.forEach(f => { LABEL_OF[f.key] = f.label; });
+}
+function viewerHas(key) { return VIEWER_KEYS.indexOf(key) !== -1; }
 
 // ============ STATE ============
 const state = {
@@ -1326,6 +1361,41 @@ function vmdFairCell(raw) {
   if (isEmpty) return `<td class="vmd-val empty">—</td>`;
   return `<td class="vmd-val"><span class="vmd-fair-chip">${fairLinkHtml(raw)}</span></td>`;
 }
+// v2.6: answers as one table (code | Dutch | English | FAIR code | name of
+// the FAIR code); the variable's own FAIR code and its name under "FAIR coding".
+function vmdTxt(v, k) { const x = v[k]; return (x === undefined || x === null) ? '' : String(x).trim(); }
+function vmdAnswersTable(v) {
+  const cols = [];
+  if (viewerHas('value_labels_NL')) cols.push({ label: 'Dutch', raw: vmdTxt(v, 'value_labels_NL') });
+  if (viewerHas('value_labels_EN')) cols.push({ label: 'English', raw: vmdTxt(v, 'value_labels_EN') });
+  if (viewerHas('value_labels_FAIR')) cols.push({ label: 'FAIR code', raw: vmdTxt(v, 'value_labels_FAIR'), fair: true });
+  if (viewerHas('value_coding')) cols.push({ label: 'Name of the FAIR code', raw: vmdTxt(v, 'value_coding') });
+  const used = cols.filter(c => c.raw);
+  if (!used.length) return '';
+  const order = [], maps = []; let parsedAny = false;
+  used.forEach(c => {
+    const p = vmdParseValues(c.raw) || []; if (p.length) parsedAny = true;
+    const m = {}; p.forEach(o => { if (!(o.code in m)) m[o.code] = o.label; if (order.indexOf(o.code) === -1) order.push(o.code); });
+    maps.push(m);
+  });
+  if (!parsedAny) return '';
+  const head = '<tr><th>Code</th>' + used.map(c => `<th>${c.label}</th>`).join('') + '</tr>';
+  const body = order.map(code => '<tr><td><span class="vmd-vl-code">' + escapeHtml(code) + '</span></td>' + used.map((c, i) => {
+    const t = maps[i][code];
+    if (t === undefined || t === '') return '<td class="empty">—</td>';
+    return c.fair ? `<td class="vmd-ans-fair">${fairLinkHtml(t)}</td>` : `<td>${escapeHtml(t)}</td>`;
+  }).join('') + '</tr>').join('');
+  return `<table class="vmd-ans">${head}${body}</table>`;
+}
+function vmdFairSection(v) {
+  const rows = [];
+  const code = viewerHas('variable_name_FAIR_merged') ? (vmdTxt(v, 'variable_name_FAIR_merged') || vmdTxt(v, 'variable_name_FAIR')) : '';
+  if (code) rows.push(['Standardized name (FAIR code)', `<span class="vmd-fair-chip">${fairLinkHtml(code)}</span>`]);
+  const lbl = viewerHas('variable_coding_label') ? vmdTxt(v, 'variable_coding_label') : '';
+  if (lbl) rows.push(['Name of the FAIR code', escapeHtml(lbl)]);
+  if (!rows.length) return '';
+  return `<div class="vmd-section"><div class="vmd-section-title">FAIR coding</div><table class="vmd-table">${rows.map(([k, x]) => `<tr><td class="vmd-key">${escapeHtml(k)}</td><td class="vmd-val">${x}</td></tr>`).join('')}</table></div>`;
+}
 function vmdRenderDetail(v) {
   if (!v) return '<div class="vmd-empty">Select a variable from the list.</div>';
   if (v._placeholder) {
@@ -1344,10 +1414,11 @@ function vmdRenderDetail(v) {
     else { const isEmpty = (val === undefined || val === null || val === ''); valCell = `<td class="vmd-val ${isEmpty ? 'empty' : ''}">${isEmpty ? '—' : escapeHtml(String(val))}</td>`; }
     return `<tr><td class="vmd-key">${escapeHtml(f.label)}</td>${valCell}</tr>`;
   };
+  const answersTbl = vmdAnswersTable(v);
   const groups = [
-    ['Classification', ['Theme', 'Subdomain']],
+    ['Classification', ['Theme', 'Subdomain', 'item_number']],
     ['Labels', ['variable_label_NL', 'variable_label_EN']],
-    ['Values', ['value_labels_NL', 'value_labels_EN', 'variable_name_FAIR_merged']]
+    ['Values', answersTbl ? ['measurement_unit'] : ['values', 'value_labels_NL', 'value_labels_EN', 'value_labels_FAIR', 'value_coding', 'measurement_unit']]
   ];
   const sections = groups.map(([title, keys]) => {
     const present = keys.filter(k => fieldByKey(k));
@@ -1359,7 +1430,7 @@ function vmdRenderDetail(v) {
     });
     if (!groupHasValue) return '';
     return `<div class="vmd-section"><div class="vmd-section-title">${title}</div><table class="vmd-table">${present.map(cell).join('')}</table></div>`;
-  }).join('');
+  }).join('') + (answersTbl ? `<div class="vmd-section"><div class="vmd-section-title">Answers</div>${answersTbl}</div>` : '') + vmdFairSection(v);
   return `<div class="vmd-detail"><div class="vmd-detail-inner">
     <div class="vmd-detail-head"><span class="vmd-detail-name">${escapeHtml(v.variable_name_CBS || '')}${vmdFxMark(v)}</span>
       <button class="btn-mini" onclick="vmdOpenSuggest()">✎ Suggest a change</button></div>
@@ -2170,6 +2241,11 @@ async function loadFromSupabase() {
   const gate = document.getElementById("gate");
   const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
   try {
+    // v2.6: which fields to show (migration 46). Without it: the fields of v2.5.
+    try {
+      const fResp = await fetch(SUPABASE_URL + "/rest/v1/viewer_fields?select=field_name,position&order=position", { headers });
+      if (fResp.ok) { const fl = await fResp.json(); if (Array.isArray(fl)) applyViewerFieldChoice(fl.map(r => r.field_name)); }
+    } catch (_) { /* keep the default fields */ }
     const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
     const resp = await fetch(url, { headers });
     if (!resp.ok) throw new Error("HTTP " + resp.status);

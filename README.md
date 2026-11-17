@@ -4,7 +4,7 @@ A browser-based, read-only viewer for the codebook (data dictionary) of the Post
 
 **Project:** Post-COVID Network Netherlands (PCNN), funded by ZonMw
 **Status:** Read-only viewer for the PCNN community access controlled (distribution under discussion)
-**Current version:** v2.5 (November 2026)
+**Current version:** v2.6 (November 2026)
 **License:** Proprietary. All rights reserved. See [LICENSE](LICENSE).
 
 ## Project context

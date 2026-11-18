@@ -857,7 +857,7 @@ const VIEWER_FIELDS = [
   { label: "Standardized name (FAIR coding)",      key: "variable_name_FAIR_merged" },
 ];
 
-const TOOL_VERSION = "v2.6";
+const TOOL_VERSION = "v2.7";
 function applyVersionLabels() {
   const p = document.getElementById('version-pill'); if (p) p.textContent = TOOL_VERSION + ' · viewer';
   const a = document.getElementById('about-version'); if (a) a.textContent = TOOL_VERSION + ' · researcher viewer';
@@ -2202,8 +2202,8 @@ function devLoadJsonFile(event) {
 // ---- Load codebook from Supabase (researcher view) ------------------------
 const SUPABASE_URL = "https://aajgbgoqomghngwfzqmz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFhamdiZ29xb21naG5nd2Z6cW16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODE0NjIsImV4cCI6MjA5NTQ1NzQ2Mn0.cNDqenHtTZdPNERghQGwN9_UcPCx34MKqwkrd6OKABE";
-const RESEARCHER_VIEW = "researcher_codebook";
-const EXPECTED_PW_HASH = "8f3c22ef936e768455e64d174ef313ace09686abad68e8f407c1f23ff64d0cb9"; // SHA-256 of the shared password (soft gate; not real access control)
+// v2.7: the password is checked in the database (migration 51, viewer_load).
+// The page holds no password or hash; without the right password no data is sent.
 
 function setupGate() {
   const inp = document.getElementById("gate-pw");
@@ -2212,62 +2212,73 @@ function setupGate() {
   if (btn) btn.addEventListener("click", gateUnlock);
   if (inp) inp.focus();
 }
-async function _sha256hex(s) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
+let _gateBusy = false;
 async function gateUnlock() {
+  if (_gateBusy) return;
   const inp = document.getElementById("gate-pw");
   const err = document.getElementById("gate-err");
+  const btn = document.getElementById("gate-btn");
   const pw = inp.value;
   if (!pw) return;
   err.style.display = "none";
-  if ((await _sha256hex(pw)) !== EXPECTED_PW_HASH) {
+  _gateBusy = true;
+  if (btn) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = "Checking\u2026"; }
+  const result = await loadFromSupabase(pw);
+  _gateBusy = false;
+  if (btn) { btn.disabled = false; btn.textContent = btn.dataset.label || "Unlock"; }
+  if (result === "wrong-password") {
     err.textContent = "Incorrect password. Please try again.";
     err.style.display = "block";
     inp.select();
-    return;
   }
-  const card = document.getElementById("gate").querySelector(".card");
-  if (card) card.innerHTML = '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h1>PCNN Codebook Viewer</h1><p class="sub">Loading the codebook\u2026</p>';
-  loadFromSupabase();
 }
 
-async function loadFromSupabase() {
+async function loadFromSupabase(pw) {
   const gate = document.getElementById("gate");
-  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: "Bearer " + SUPABASE_ANON_KEY };
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: "Bearer " + SUPABASE_ANON_KEY,
+    "Content-Type": "application/json"
+  };
+  let resp;
   try {
-    // v2.6: which fields to show (migration 46). Without it: the fields of v2.5.
-    try {
-      const fResp = await fetch(SUPABASE_URL + "/rest/v1/viewer_fields?select=field_name,position&order=position", { headers });
-      if (fResp.ok) { const fl = await fResp.json(); if (Array.isArray(fl)) applyViewerFieldChoice(fl.map(r => r.field_name)); }
-    } catch (_) { /* keep the default fields */ }
-    const url = SUPABASE_URL + "/rest/v1/" + RESEARCHER_VIEW + "?select=*&limit=20000";
-    const resp = await fetch(url, { headers });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const rows = await resp.json();
-    if (!Array.isArray(rows)) throw new Error("unexpected response shape");
-
-    // Instrument descriptions (published instruments only). Best-effort.
-    try {
-      const dResp = await fetch(SUPABASE_URL + "/rest/v1/instruments_public?select=name,description", { headers });
-      if (dResp.ok) {
-        const defs = await dResp.json();
-        const m = {};
-        (defs || []).forEach(r => { if (r && r.name) m[r.name] = r.description || ""; });
-        state.instrumentDesc = m;
-      }
-    } catch (_) { /* descriptions are optional */ }
-
-    if (gate) gate.style.display = "none";
-    applyLoadedPayload({ variables: rows }, true);
+    resp = await fetch(SUPABASE_URL + "/rest/v1/rpc/viewer_load", {
+      method: "POST", headers, body: JSON.stringify({ p_password: pw })
+    });
   } catch (e) {
-    if (gate) {
-      const card = gate.querySelector(".card");
-      if (card) card.innerHTML = '<h1>Could not load the codebook</h1><p class="sub">Please check your connection and refresh the page.</p>';
-    }
+    showLoadError();
     console.error("Supabase load failed:", e);
+    return "error";
   }
+  if (!resp.ok) {
+    let body = null;
+    try { body = await resp.json(); } catch (_) {}
+    if (body && body.code === "28P01") return "wrong-password";
+    showLoadError();
+    console.error("Supabase load failed: HTTP " + resp.status, body);
+    return "error";
+  }
+  try {
+    const data = await resp.json();
+    if (!data || !Array.isArray(data.variables)) throw new Error("unexpected response shape");
+    if (Array.isArray(data.fields)) applyViewerFieldChoice(data.fields);
+    const m = {};
+    (data.instruments || []).forEach(r => { if (r && r.name) m[r.name] = r.description || ""; });
+    state.instrumentDesc = m;
+    if (gate) gate.style.display = "none";
+    applyLoadedPayload({ variables: data.variables }, true);
+    return "ok";
+  } catch (e) {
+    showLoadError();
+    console.error("Supabase load failed:", e);
+    return "error";
+  }
+}
+
+function showLoadError() {
+  const gate = document.getElementById("gate");
+  const card = gate && gate.querySelector(".card");
+  if (card) card.innerHTML = '<h1>Could not load the codebook</h1><p class="sub">Please check your connection and refresh the page.</p>';
 }
 
 init();
